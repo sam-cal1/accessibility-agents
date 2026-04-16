@@ -1,0 +1,556 @@
+# CLI Utilities Specification for 5.0.0 Migration
+
+## Overview
+
+After migrating to `gh skill`, we replace the monolithic installer with 4 focused CLI utilities:
+
+1. **`setup`** — Interactive configuration post-install
+2. **`health`** — Runtime dependency validation
+3. **`repair`** — Fix broken installations
+4. **`hooks`** — Git hook management
+
+---
+
+## 1. Setup Utility (`.github/cli/setup.js`)
+
+### Purpose
+Post-install configuration wizard. Runs after `gh skill install`.
+
+### Usage
+
+```bash
+# Interactive mode (wizard)
+gh skill setup Community-Access/accessibility-agents
+
+# Or standalone
+node .github/cli/setup.js
+
+# Non-interactive with options
+node .github/cli/setup.js --role developer --scope global --yes
+```
+
+### Functionality
+
+#### Step 1: Detect Current Environment
+```
+✓ Checking installed agents/skills...
+✓ Found 80 agents at ~/.gh/skills/...
+✓ No previous configuration found
+```
+
+#### Step 2: Scope Selection
+```
+Installation scope:
+  1. Global (~/.claude/agents)
+  2. Project (./.claude/agents)
+
+Choose: [1] > _
+```
+
+#### Step 3: Role Selection
+```
+Installation role:
+  1. Developer (all agents + CLI tools)
+  2. Reviewer (read-only audit agents)
+  3. Author (content creation + documentation)
+  4. Full (everything)
+  5. Custom (pick individual agents)
+
+Choose: [1] > _
+```
+
+#### Step 4: Platform Setup
+```
+Configure for:
+  [ ] VS Code (Copilot) - Stable
+  [ ] VS Code (Copilot) - Insiders
+  [x] Claude Desktop (MCP)
+  [ ] Codex CLI
+  [ ] Gemini CLI
+
+Configure: [y/n] > y
+```
+
+#### Step 5: MCP Profile Configuration
+```
+Configuring VS Code MCP profiles...
+  ✓ Detected VS Code Stable at C:\Users\...\AppData\Local\...
+  ✓ Detected VS Code Insiders at C:\Users\...\AppData\Local\...
+  ✓ Setting up MCP socket connections
+
+Enter MCP server port [8080]: > _
+```
+
+#### Step 6: Team Config (Optional)
+```
+Team configuration file (optional):
+  Path to config.json: > config.json
+
+Validating config...
+  ✓ Loaded: role=developer, scope=global, autoUpdate=true
+```
+
+#### Step 7: Summary & Confirmation
+```
+Configuration Summary:
+  Scope: Global (~/.claude/agents)
+  Role: developer
+  Platforms: Claude Desktop, VS Code Stable
+  Team Config: config.json
+  Auto-update: enabled
+
+Apply configuration? [y/n] > y
+```
+
+#### Step 8: Post-Setup Health Check
+```
+Running health checks...
+  ✓ Node.js v18.12.0 (required for MCP)
+  ✓ Agent files validated
+  ✓ Skill files validated
+  ✓ MCP profile configured
+  ✓ VS Code extension loaded
+
+✅ Setup complete! Ready to use.
+```
+
+### Output Files Created
+
+```
+~/.accessibility-agents/
+├── config.json                    # User configuration
+├── manifests.json                 # Installed agents/skills
+├── version.txt                    # Current version
+└── logs/
+    └── setup-YYYY-MM-DD.log      # Setup log
+```
+
+### Return Codes
+- `0`: Success
+- `1`: User cancelled
+- `2`: Configuration error
+- `3`: File system error
+
+---
+
+## 2. Health Utility (`.github/cli/health.js`)
+
+### Purpose
+Validate that all runtime dependencies and configurations are working.
+
+### Usage
+
+```bash
+# Interactive check
+gh skill health Community-Access/accessibility-agents
+
+# Or standalone
+node .github/cli/health.js
+
+# Specific check
+node .github/cli/health.js --check runtimes
+node .github/cli/health.js --check agents
+node .github/cli/health.js --check hooks
+node .github/cli/health.js --check all
+```
+
+### Checks Performed
+
+#### 1. Runtime Dependencies
+```
+Runtime Dependencies:
+  ✓ Node.js v18.12.0 (required for MCP server)
+  ⚠ Java 11.0.15 (optional, for PDF analysis)
+  ✓ Git 2.37.0 (required for hooks)
+```
+
+#### 2. Playwright Browsers
+```
+Playwright Browsers:
+  ✓ Chromium (for accessibility scans)
+  ✓ Firefox (optional)
+  ⚠ WebKit (not installed)
+```
+
+#### 3. Agent/Skill Files
+```
+Agent & Skill Files:
+  ✓ 80 agents found
+  ✓ 25 skills found
+  ✓ All files readable
+  ✓ Manifests consistent
+```
+
+#### 4. Configuration
+```
+Configuration:
+  ✓ User config loaded
+  ✓ Role: developer
+  ✓ Scope: global
+  ✓ Team config: valid
+```
+
+#### 5. VS Code Integration
+```
+VS Code Integration:
+  ✓ Extension installed (Copilot)
+  ✓ Settings folder exists
+  ✓ MCP profiles configured
+  ⚠ VS Code Insiders not detected
+```
+
+#### 6. Claude Desktop MCP
+```
+Claude Desktop MCP:
+  ✓ Configuration exists at ~/.claude/profiles/default
+  ✓ MCP server socket accessible
+  ✓ Health check passed
+```
+
+#### 7. Git Hooks
+```
+Git Hooks:
+  ✓ Pre-commit hook installed
+  ✓ Hook is executable
+  ✓ Hook tests pass
+  ✓ Global hook directory: ~/.git/hooks
+```
+
+#### 8. Network Connectivity
+```
+Network:
+  ✓ GitHub API accessible
+  ✓ Skills registry accessible
+  ✓ Can check for updates
+```
+
+### Output Report
+
+```
+Health Check Report
+═══════════════════════════════════════════════════════════
+
+Overall Status: ✅ HEALTHY (8/8 checks passed)
+
+Issues Found: 0
+Warnings: 1 (Java not installed - optional)
+Manual Review Items: 0
+
+Timestamp: 2026-04-16T14:32:15Z
+Installation: ~/.claude/agents/
+Config: ~/.accessibility-agents/config.json
+
+═══════════════════════════════════════════════════════════
+
+✅ All systems operational. Ready to use!
+```
+
+### Return Codes
+- `0`: All checks passed
+- `1`: 1+ critical issues
+- `2`: Issues but functional
+- `3`: Uncorrectable problems
+
+---
+
+## 3. Repair Utility (`.github/cli/repair.js`)
+
+### Purpose
+Fix broken or misconfigured installations.
+
+### Usage
+
+```bash
+# Interactive repair
+gh skill repair Community-Access/accessibility-agents
+
+# Or standalone
+node .github/cli/repair.js
+
+# Auto-repair (no prompts)
+node .github/cli/repair.js --auto-repair
+
+# Specific repairs
+node .github/cli/repair.js --fix manifests
+node .github/cli/repair.js --fix hooks
+node .github/cli/repair.js --fix config
+node .github/cli/repair.js --fix all
+```
+
+### Repair Actions
+
+#### 1. Regenerate Manifests
+```
+Regenerating manifests...
+  ✓ Found 80 agents
+  ✓ Found 25 skills
+  ✓ Validating file integrity
+  ✓ Wrote manifests.json
+```
+
+#### 2. Reinstall Git Hooks
+```
+Reinstalling Git hooks...
+  ✓ Found pre-commit hook
+  ✓ Backing up existing hooks
+  ✓ Installing fresh hook
+  ✓ Testing hook execution
+  ✓ Registered global hook
+```
+
+#### 3. Validate Configuration
+```
+Validating configuration...
+  ✓ config.json exists
+  ✓ config.json valid JSON
+  ✓ All required fields present
+  ✓ Version alignment check
+  ? Missing: "autoUpdate" (using default: true)
+  ✓ Configuration valid
+```
+
+#### 4. Sync MCP Profiles
+```
+Syncing MCP profiles...
+  ✓ Claude Desktop profile found
+  ✓ MCP socket connection established
+  ✓ Skills available to Claude
+  ✓ Agents available to Claude
+  ✓ MCP profiles synchronized
+```
+
+#### 5. Fix File Permissions
+```
+Fixing file permissions...
+  ✓ Agent files: readable ✓
+  ✓ Skill files: readable ✓
+  ✓ Config files: readable/writable ✓
+  ✓ Hook files: executable ✓
+  ✓ All permissions correct
+```
+
+#### 6. Version Consistency
+```
+Checking version consistency...
+  Current: 5.0.0
+  ✓ CHANGELOG.md: 5.0.0
+  ✓ plugin.yaml: 5.0.0
+  ✓ Installed agents: v5.0.0
+  ✓ Installed skills: v5.0.0
+  ✓ All versions aligned
+```
+
+### Output Report
+
+```
+Repair Report
+═══════════════════════════════════════════════════════════
+
+Issues Found: 3
+  - Missing: Git hook executable bit
+  - Stale: Manifests from v4.6.0
+  - Warning: Optional Java not installed
+
+Repairs Applied: 2
+  ✓ Regenerated manifests
+  ✓ Fixed hook permissions
+
+Repairs Skipped: 1
+  - Java installation (optional)
+
+Status: REPAIRED
+Next step: Run 'gh skill health' to verify
+
+═══════════════════════════════════════════════════════════
+```
+
+### Return Codes
+- `0`: Repairs completed successfully
+- `1`: Some repairs failed, manual intervention needed
+- `2`: Unable to repair, reinstall recommended
+
+---
+
+## 4. Hooks Utility (`.github/cli/hooks.js`)
+
+### Purpose
+Manage Git pre-commit hooks for accessibility checks.
+
+### Usage
+
+```bash
+# Install hooks (interactive)
+gh skill hooks Community-Access/accessibility-agents install
+
+# Uninstall hooks
+gh skill hooks Community-Access/accessibility-agents uninstall
+
+# Status check
+gh skill hooks Community-Access/accessibility-agents status
+
+# Standalone
+node .github/cli/hooks.js install|uninstall|status
+```
+
+### Install Functionality
+
+```
+Installing Git hooks...
+
+✓ Detected Git repository at /d/code/agents/.git
+✓ Detected OS: Windows
+
+Creating pre-commit hook...
+  Location: .git/hooks/pre-commit
+  Content: Runs 'npm run validate-agents' before commits
+  
+Register globally? (optional)
+  This allows hook to run in all repos
+  [y/n] > y
+
+✓ Installing global hook handler
+✓ Registered accessibility-agents hook
+✓ Hook is executable
+
+Testing hook execution...
+  $ npm run validate-agents
+  ✓ All agents valid
+  ✓ Hook works correctly
+
+✅ Git hooks installed successfully
+```
+
+### Uninstall Functionality
+
+```
+Uninstalling Git hooks...
+
+✓ Found pre-commit hook for accessibility-agents
+✓ Backing up to ~/.accessibility-agents/hooks/pre-commit.bak
+✓ Removed hook from .git/hooks/pre-commit
+✓ Removed global hook registration
+
+✅ Git hooks uninstalled
+```
+
+### Status Functionality
+
+```
+Git Hooks Status
+═══════════════════════════════════════════════════════════
+
+Local Repository: /d/code/agents/.git
+  ✓ Pre-commit hook installed
+  ✓ Hook is executable
+  ✓ Hook tests accessibility
+  Version: 5.0.0
+
+Global Registration:
+  ✓ Global hook handler active
+  ✓ Applies to all repositories
+  ✓ Can be disabled: 'gh skill hooks disable'
+
+Recent Hook Executions:
+  2026-04-16 14:15:22 - PASSED (0 issues)
+  2026-04-16 14:12:10 - WARNING (1 issue found, bypassed)
+  2026-04-16 14:05:44 - PASSED (0 issues)
+
+═══════════════════════════════════════════════════════════
+```
+
+### Return Codes
+- `0`: Success
+- `1`: Git repository not found
+- `2`: Permission denied
+- `3`: Hook already exists/removed
+
+---
+
+## Implementation Phases
+
+### Phase 1: Build Utilities
+- [ ] `setup.js` — interactive configuration (300 lines)
+- [ ] `health.js` — dependency validation (200 lines)
+- [ ] `repair.js` — fix installations (200 lines)
+- [ ] `hooks.js` — Git hook management (150 lines)
+
+### Phase 2: Integration with `gh skill`
+
+Each utility is invokable as:
+```bash
+gh skill setup Community-Access/accessibility-agents
+gh skill health Community-Access/accessibility-agents
+gh skill repair Community-Access/accessibility-agents
+gh skill hooks Community-Access/accessibility-agents [action]
+```
+
+This requires entries in `plugin.yaml`:
+
+```yaml
+subcommands:
+  - name: setup
+    description: "Interactive setup wizard"
+    command: node .github/cli/setup.js
+  - name: health
+    description: "Validate runtime configuration"
+    command: node .github/cli/health.js
+  - name: repair
+    description: "Fix broken installations"
+    command: node .github/cli/repair.js
+  - name: hooks
+    description: "Manage Git pre-commit hooks"
+    command: node .github/cli/hooks.js
+```
+
+### Phase 3: Testing
+- [ ] Test on macOS
+- [ ] Test on Windows (PowerShell)
+- [ ] Test on Linux (Bash)
+- [ ] Test interactive modes
+- [ ] Test non-interactive modes
+- [ ] Verify all features preserved from 4.6.0 installer
+
+### Phase 4: Documentation
+- [ ] Update README with new workflow
+- [ ] Document each utility
+- [ ] Provide examples
+- [ ] Migration guide for existing users
+
+---
+
+## Nothing Gets Lost: Complete Feature Mapping
+
+| Feature | 4.6.0 | 5.0.0+ | Utility |
+|---------|-------|--------|---------|
+| Installation | install.ps1 | `gh skill install` | GitHub |
+| Role selection | -Role flag | `gh skill setup` (interactive) | setup.js |
+| Scope (global/project) | -Project/-Global | `gh skill setup` (interactive) | setup.js |
+| MCP setup | Embedded | `gh skill setup` | setup.js |
+| VS Code Copilot | Embedded | `gh skill setup` | setup.js |
+| Team config | -Config flag | `gh skill setup` (optional) | setup.js |
+| Runtime validation | Built-in | `gh skill health` | health.js |
+| Dependency checks | Built-in | `gh skill health` | health.js |
+| Repair/fix | Embedded | `gh skill repair` | repair.js |
+| Git hooks | Install-GlobalHooks | `gh skill hooks install` | hooks.js |
+| Hook status | install.ps1 -Check | `gh skill hooks status` | hooks.js |
+| Post-install check | Automatic | `gh skill health` (manual) | health.js |
+
+---
+
+## Summary
+
+### What We're Building
+4 focused Node.js CLI utilities (~850 lines total) to handle all installer responsibilities.
+
+### What We're Removing
+6,767 lines of platform-specific installer code.
+
+### What We're Gaining
+- ✅ Simpler, more maintainable code
+- ✅ Faster releases
+- ✅ Professional GitHub distribution
+- ✅ Automatic updates
+- ✅ Cross-platform support
+- ✅ All existing functionality preserved
+
+**Everything works. Just simpler.**
