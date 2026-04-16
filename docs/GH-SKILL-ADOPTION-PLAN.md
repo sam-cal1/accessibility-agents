@@ -15,16 +15,69 @@ Adopt GitHub's native `gh skill` paradigm as the **primary and only** distributi
 
 ## Implementation Checklist
 
-### Phase 1: Documentation & Communication (Week 1)
+### Phase 0: Build CLI Utilities [PREREQUISITE] (Week 1)
+
+**CRITICAL: Must complete BEFORE Phase 2 (repository cleanup)**
+
+These utilities replace all installer functionality. Building them first ensures nothing is lost.
+
+- [ ] Create `.github/cli/setup.js` (~300 lines)
+  - [ ] Interactive role/scope/platform selection
+  - [ ] Team config JSON support
+  - [ ] MCP profile configuration
+  - [ ] Logging and summary output
+  
+- [ ] Create `.github/cli/health.js` (~200 lines)
+  - [ ] Node.js/Java version checking
+  - [ ] Playwright validation
+  - [ ] Agent/skill verification
+  - [ ] VS Code integration check
+  - [ ] Claude Desktop MCP check
+  - [ ] Git hooks status check
+  
+- [ ] Create `.github/cli/repair.js` (~200 lines)
+  - [ ] Manifest regeneration
+  - [ ] Git hook reinstallation
+  - [ ] Configuration validation
+  - [ ] MCP profile sync
+  - [ ] File permission fixes
+  - [ ] Version consistency
+  
+- [ ] Create `.github/cli/hooks.js` (~150 lines)
+  - [ ] Pre-commit hook installation
+  - [ ] Hook uninstallation
+  - [ ] Status checking
+  - [ ] Global hook registration
+
+- [ ] Update `plugin.yaml` with subcommands:
+  ```yaml
+  subcommands:
+    - setup
+    - health
+    - repair
+    - hooks
+  ```
+
+- [ ] Test all utilities (Windows/macOS/Linux)
+- [ ] Verify feature parity with old installer
+- [ ] Document each utility
+
+### Phase 1: Documentation & Communication (Week 1-2)
 
 - [x] Create migration guide (`docs/GH-SKILL-MIGRATION.md`)
+- [x] Create adoption plan (`docs/GH-SKILL-ADOPTION-PLAN.md`)
+- [x] Create functionality audit (`docs/INSTALLER-FUNCTIONALITY-AUDIT.md`)
+- [x] Create CLI utilities spec (`docs/CLI-UTILITIES-SPECIFICATION.md`)
 - [ ] Update README.md with new installation instructions
 - [ ] Create `docs/installation.md` focused on `gh skill`
+- [ ] Create `docs/cli-utilities.md` documenting setup/health/repair/hooks
 - [ ] Add FAQ section to GitHub Wiki
 - [ ] Write deprecation notices for install.ps1/install.sh
 - [ ] Update CHANGELOG.md with breaking changes notice
 
-### Phase 2: Repository Cleanup (Week 2)
+### Phase 2: Repository Cleanup (Week 3)
+
+**ONLY after Phase 0 is complete and tested**
 
 - [ ] **Delete old installers:**
   - [ ] `install.ps1`
@@ -37,15 +90,19 @@ Adopt GitHub's native `gh skill` paradigm as the **primary and only** distributi
 - [ ] **Delete supporting scripts:**
   - [ ] `scripts/Installer.Common.ps1`
   - [ ] `scripts/installer-common.sh`
-  - [ ] `scripts/install-hooks.js` (Git hooks installer)
+  - [ ] `scripts/install-hooks.js` (replaced by `.github/cli/hooks.js`)
 
 - [ ] **Keep and validate:**
-  - [x] `plugin.yaml` (already compliant)
+  - [x] `plugin.yaml` (already compliant, now with subcommands)
   - [x] `manifest.json` (auto-generated)
   - [x] `.github/agents/*.agent.md` (all 80)
   - [x] `.github/skills/*/SKILL.md` (all 25)
+  - [x] `.github/cli/setup.js` (new)
+  - [x] `.github/cli/health.js` (new)
+  - [x] `.github/cli/repair.js` (new)
+  - [x] `.github/cli/hooks.js` (new)
 
-### Phase 3: CI/CD Simplification (Week 2)
+### Phase 3: CI/CD Simplification (Week 3)
 
 - [ ] Remove installer test jobs from GitHub Actions
 - [ ] Remove multi-platform build artifacts from releases
@@ -56,7 +113,7 @@ Adopt GitHub's native `gh skill` paradigm as the **primary and only** distributi
   - (GitHub handles distribution automatically)
 - [ ] Update PR validation to skip installer checks
 
-### Phase 4: Documentation Updates (Week 2)
+### Phase 4: Documentation Updates (Week 3-4)
 
 - [ ] **README.md:** New "Quick Start" section
   ```
@@ -68,24 +125,33 @@ Adopt GitHub's native `gh skill` paradigm as the **primary and only** distributi
   
   # Install Accessibility Agents
   gh skill install Community-Access/accessibility-agents
+  
+  # Configure (interactive wizard)
+  gh skill setup Community-Access/accessibility-agents
   ```
   ```
 
 - [ ] **docs/getting-started.md:** Platform-agnostic
 - [ ] **docs/installation.md:** New file with `gh skill` focus
+- [ ] **docs/cli-utilities.md:** Document setup/health/repair/hooks
 - [ ] **AGENTS.md:** Update "Installation" section
 - [ ] **CLAUDE.md:** Update "Installation" section
 
-### Phase 5: Testing (Week 3)
+### Phase 5: Testing (Week 4)
 
 - [ ] Test `gh skill install` on macOS
 - [ ] Test `gh skill install` on Windows (PowerShell)
 - [ ] Test `gh skill install` on Linux (Bash)
+- [ ] Test `gh skill setup` interactive mode
+- [ ] Test `gh skill setup` non-interactive mode
+- [ ] Test `gh skill health` validation
+- [ ] Test `gh skill repair` functionality
+- [ ] Test `gh skill hooks install|uninstall`
 - [ ] Test `gh skill upgrade` functionality
 - [ ] Verify agents load correctly after install
 - [ ] Verify skills are discoverable in `gh skill search`
 
-### Phase 6: Release Preparation (Week 3)
+### Phase 6: Release Preparation (Week 5)
 
 - [ ] Create release branch: `release/5.0.0-gh-skill`
 - [ ] Update version references (already at 5.0.0)
@@ -93,7 +159,7 @@ Adopt GitHub's native `gh skill` paradigm as the **primary and only** distributi
 - [ ] Create GitHub release with title: "Accessibility Agents 5.0.0: Powered by GitHub Skills"
 - [ ] Publish RELEASE-5.0.0.md in release notes
 
-### Phase 7: Communication & Launch (Week 4)
+### Phase 7: Communication & Launch (Week 5-6)
 
 - [ ] Announce on GitHub Discussions
 - [ ] Create migration guide for current users
@@ -270,6 +336,16 @@ If `gh skill` integration fails:
 
 Before 5.0.0 release:
 
+**CRITICAL PREREQUISITE:**
+- [ ] Phase 0 COMPLETE: All CLI utilities built and tested
+  - [ ] `.github/cli/setup.js` working
+  - [ ] `.github/cli/health.js` working
+  - [ ] `.github/cli/repair.js` working
+  - [ ] `.github/cli/hooks.js` working
+  - [ ] Feature parity verified with old installer
+  - [ ] Multi-platform testing complete
+
+**Only after Phase 0 is complete:**
 - [ ] All installers properly deleted
 - [ ] All gh skill integration tests pass
 - [ ] README clearly shows new installation method
