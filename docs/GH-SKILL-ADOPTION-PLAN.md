@@ -155,7 +155,7 @@ These utilities replace all installer functionality. Building them first ensures
 
 - [ ] Create release branch: `release/5.0.0-gh-skill`
 - [ ] Update version references (already at 5.0.0)
-- [ ] Add deprecation warnings to 4.6.0 branch
+- [ ] Add deprecation warnings to the legacy installer branch
 - [ ] Create GitHub release with title: "Accessibility Agents 5.0.0: Powered by GitHub Skills"
 - [ ] Publish RELEASE-5.0.0.md in release notes
 
@@ -228,7 +228,7 @@ gh skill install Community-Access/accessibility-agents
 
 ## CI/CD Pipeline Before & After
 
-### Before (4.6.0)
+### Before (Legacy Installer Flow)
 
 ```
 1. Validate agents ........................ ~30s
@@ -287,8 +287,8 @@ gh skill list
 
 If `gh skill` integration fails:
 
-1. Keep 4.6.0 branch frozen (do not delete)
-2. Tag a "last-old-installer" release (4.6.0-final)
+1. Keep a legacy installer branch frozen (do not delete)
+2. Tag a "last-old-installer" archive point if needed
 3. Publish detailed docs on using old installer
 4. Create hybrid approach: `gh skill` as primary, old script as fallback
 
@@ -323,7 +323,7 @@ If `gh skill` integration fails:
 **A:** Installation instructions clearly state requirement. GitHub CLI is ubiquitous for devs.
 
 ### Q: What about air-gapped deployments?
-**A:** Use 4.6.0 (4.6.0 branch remains available indefinitely).
+**A:** Use the legacy installer branch if you need the script-based path.
 
 ### Q: Will this break CI/CD integrations?
 **A:** No. Users who currently use scripts can upgrade to `gh skill` transparently.
@@ -351,7 +351,7 @@ Before 5.0.0 release:
 - [ ] All gh skill integration tests pass
 - [ ] README clearly shows new installation method
 - [ ] Migration guide published
-- [ ] Deprecation notices on 4.6.0 branch
+- [ ] Deprecation notices on the legacy installer branch
 - [ ] GitHub release ready
 - [ ] Community notified
 - [ ] CI/CD simplified

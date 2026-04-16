@@ -56,7 +56,7 @@ Version 5.0 transitions the project from an advisory scanning tool to a full rem
 
 ## Completed (4.x)
 
-See the [changelog](CHANGELOG.md) for everything shipped through 4.6.0, including:
+See the [changelog](CHANGELOG.md) for everything shipped through 5.0.0, including:
 
 - 80 agent definitions across 5 platforms
 - MCP server with 30+ tools, Streamable HTTP + SSE transport
@@ -64,12 +64,12 @@ See the [changelog](CHANGELOG.md) for everything shipped through 4.6.0, includin
 - 102 document accessibility rules (46 Office + 56 PDF)
 - Rebuilt installation tooling with 16 CLI flags
 - VS Code 1.113 alignment
-- ePub accessibility scanning and MCP tools (4.6)
-- Markdown scanning MCP tools (4.6)
-- veraPDF SARIF integration (4.6)
-- Audit cache enhancement with TTL and size limits (4.6)
+- ePub accessibility scanning and MCP tools (5.0)
+- Markdown scanning MCP tools (5.0)
+- veraPDF SARIF integration (5.0)
+- Audit cache enhancement with TTL and size limits (5.0)
 - Guided MCP server installation wizard
-- 5 security hardening fixes (4.6)
+- 5 security hardening fixes (5.0)
 
 ---
 

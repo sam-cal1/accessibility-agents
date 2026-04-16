@@ -31,7 +31,7 @@ Important: you do not need Node.js to run `gh skill install`, `gh skill setup`, 
 
 ### ✅ Simpler Installation
 
-| Feature | 4.6.0 | 5.0.0 |
+| Feature | Legacy flow | 5.0.0 |
 |---------|-------|-------|
 | **Platform** | Separate PS1/SH scripts | Unified `gh` command |
 | **Installation** | Run script manually | `gh skill install` |
@@ -488,7 +488,7 @@ gh skill setup Community-Access/accessibility-agents
 
 ## What's No Longer Needed
 
-These files from 4.6.0 are **no longer needed** in 5.0.0:
+These files from the legacy installer flow are **no longer needed** in 5.0.0:
 
 ```
 ❌ install.ps1        (replaced by gh skill install)
@@ -515,7 +515,7 @@ The new system is cleaner, simpler, and more reliable.
   ✅ Done!
 ```
 
-### 4.6.0 Process (OLD - No longer needed)
+### Legacy Process (OLD - No longer needed)
 
 ```
 Complex setup:

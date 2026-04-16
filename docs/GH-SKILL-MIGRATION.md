@@ -12,7 +12,7 @@
 
 ## Why This Change Makes Sense
 
-### Current State (4.6.0 and Earlier)
+### Current State (Legacy Installer-Based Builds)
 ```
 ┌─────────────────┐
 │  Custom Scripts │  2,079 lines (Windows PowerShell)
@@ -85,7 +85,7 @@ Or enable auto-updates:
 gh skill upgrade --auto-update Community-Access/accessibility-agents
 ```
 
-### For Current 4.6.0 Users
+### For Current Legacy Installer Users
 
 **Migration path:**
 1. Uninstall old version: `gh skill uninstall Community-Access/accessibility-agents`
@@ -210,14 +210,14 @@ gh skill search accessibility
 
 ## Frequently Asked Questions
 
-### Q: Does this break my 4.6.0 installation?
-**A:** No. Your 4.6.0 installation continues to work. You can migrate at your own pace.
+### Q: Does this break my existing installer-based setup?
+**A:** No. Existing script-installed setups continue to work while you migrate. The unreleased 4.6 work was rolled into 5.0, so 5.0 is the supported target.
 
 ### Q: Can I use both old and new installers?
 **A:** Not recommended. They manage the same agents. Use one or the other. Migration is straightforward.
 
 ### Q: What if I don't want to install `gh` CLI?
-**A:** The old installer (4.6.0) continues to work. But 5.0.0 requires `gh` CLI.
+**A:** 5.0.0 requires `gh` CLI. If you need the legacy installer flow, use the archived script-based setup from git history or a legacy branch.
 
 ### Q: Do I lose my agent customizations?
 **A:** No. Your configurations are in `~/.accessibility-agents/`. They persist.
@@ -229,7 +229,7 @@ gh skill search accessibility
 **A:** Yes. GitHub Signs releases cryptographically. Distribution is via trusted GitHub infrastructure, not raw script downloads.
 
 ### Q: What about air-gapped environments?
-**A:** `gh skill` requires internet access to GitHub. For air-gapped setups, 4.6.0 installers continue to work (with local manifests).
+**A:** `gh skill` requires internet access to GitHub. For air-gapped setups, use the archived installer-based flow from a legacy branch or internal mirror.
 
 ---
 
@@ -240,7 +240,7 @@ gh skill search accessibility
 | **2026-03-26** | Version 5.0.0 released with `gh skill` as primary installation method |
 | **2026-06-26** | Old installers moved to `legacy/` branch (read-only) |
 | **2026-09-26** | Old installers removed from main branch (still in git history) |
-| **2027-01-01** | Support for old installer ends (4.6.0 branch frozen) |
+| **2027-01-01** | Support for old installer ends (legacy branch frozen) |
 
 ---
 
@@ -270,7 +270,7 @@ gh skill search accessibility
 
 1. **Install `gh` CLI** (v2.47.0+)
 2. **Try the new installer:** `gh skill install Community-Access/accessibility-agents`
-3. **Uninstall 4.6.0** (optional, they can coexist)
+3. **Remove any legacy installer deployment** (optional, they can coexist temporarily)
 4. **Provide feedback:** GitHub Issues or Discussions
 
 ---

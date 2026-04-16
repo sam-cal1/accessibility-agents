@@ -344,7 +344,7 @@ This setting eliminates the confusion by telling VS Code which directory to use 
 **When it is applied:**
 
 - During initial installation (both project and global installs)
-- During every updater run, as a repair step for installations that predate version 4.6.0 when this fix was introduced
+- During every updater run, as a repair step for installations that predate the final 5.0 migration when this fix was introduced
 
 **Where the file is modified:**
 

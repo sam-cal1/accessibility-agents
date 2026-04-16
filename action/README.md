@@ -11,7 +11,7 @@ Part of the [Accessibility Agents](https://github.com/Community-Access/accessibi
 Add one step to any workflow:
 
 ```yaml
-- uses: Community-Access/accessibility-agents/action@v4.6.0
+- uses: Community-Access/accessibility-agents/action@v5.0.0
   with:
     scan-type: web
 ```
@@ -77,7 +77,7 @@ jobs:
 ### Lenient scan (fail on critical only)
 
 ```yaml
-- uses: Community-Access/accessibility-agents/action@v4.6.0
+- uses: Community-Access/accessibility-agents/action@v5.0.0
   with:
     fail-on: critical
     profile: minimal
@@ -86,7 +86,7 @@ jobs:
 ### Use outputs in subsequent steps
 
 ```yaml
-- uses: Community-Access/accessibility-agents/action@v4.6.0
+- uses: Community-Access/accessibility-agents/action@v5.0.0
   id: a11y
   with:
     scan-type: web

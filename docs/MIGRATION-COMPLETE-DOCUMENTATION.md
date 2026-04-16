@@ -8,7 +8,7 @@
 
 ### 1. **GH-SKILL-MIGRATION.md** — User-Facing Migration Guide
 - Why this change makes sense
-- Migration path for 4.6.0 users
+- Migration path for legacy installer users
 - FAQ and troubleshooting
 - Timeline and support resources
 
@@ -64,7 +64,7 @@ Specifies 4 focused utilities (~850 lines total) that replace old installer:
 
 ### 5. **MIGRATION-SAFETY-GUARANTEE.md** — Proof Nothing is Lost
 - Complete feature mapping table
-- Side-by-side comparison (4.6.0 vs 5.0.0)
+- Side-by-side comparison (legacy installer flow vs 5.0.0)
 - Risk mitigation strategy
 - "Everything is carefully planned. Nothing is lost."
 
@@ -208,7 +208,7 @@ These will be done in Phase 0 (implementation PR):
 5. **User Guide:** [GH-SKILL-MIGRATION.md](GH-SKILL-MIGRATION.md)
    - 10-minute read
    - How users will experience the change
-   - Migration path for 4.6.0 users
+   - Migration path for legacy installer users
 
 ---
 
@@ -236,7 +236,7 @@ These will be done in Phase 0 (implementation PR):
 1. ✅ **No data loss** — All functionality preserved in CLI utilities
 2. ✅ **No hidden complexity** — Full specifications provided
 3. ✅ **Safe migration** — Phase 0 prerequisite ensures testing
-4. ✅ **User support** — Clear migration guide for 4.6.0 users
+4. ✅ **User support** — Clear migration guide for legacy installer users
 5. ✅ **Documented process** — 5 comprehensive documents
 6. ✅ **Professional quality** — GitHub ecosystem standards
 

@@ -1,6 +1,6 @@
 # Installer Functionality Audit for gh skill Migration
 
-## Current Installer Responsibilities (4.6.0)
+## Current Installer Responsibilities (Legacy Pre-5.0 Flow)
 
 ### What It Does Now
 
@@ -252,7 +252,7 @@ go run ./go-cli/cmd/hooks --action status
 
 ## Nothing Gets Lost: Feature Mapping
 
-| Current Feature | 4.6.0 | 5.0.0+ | Handler |
+| Current Feature | Legacy flow | 5.0.0+ | Handler |
 |-----------------|-------|--------|---------|
 | **Installation** | install.ps1/sh | `gh skill install` | GitHub |
 | **Agent distribution** | Manual copy | Auto-download | GitHub |
@@ -288,7 +288,7 @@ go run ./go-cli/cmd/hooks --action status
 
 ## User Experience: Side-by-Side Comparison
 
-### 4.6.0 (Old Way)
+### Legacy Script-Based Flow (Old Way)
 Legacy script-based installation (removed in 5.0.0) used platform-specific installers and repair scripts.
 
 ### 5.0.0+ (New Way)

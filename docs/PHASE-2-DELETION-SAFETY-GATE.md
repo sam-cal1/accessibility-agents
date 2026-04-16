@@ -172,7 +172,7 @@ Cannot be deleted until all items below are verified WORKING.
 
 ## User Migration Testing
 
-### 4.6.0 User Migration Scenario
+### Legacy User Migration Scenario
 
 - [ ] **Fresh Install Path**
   - [ ] User runs: `gh skill install Community-Access/accessibility-agents`
@@ -185,7 +185,7 @@ Cannot be deleted until all items below are verified WORKING.
   - [ ] All checks pass
   - [ ] ✅ User has working 5.0.0 installation
 
-- [ ] **Upgrade Path (4.6.0 → 5.0.0)**
+- [ ] **Upgrade Path (legacy installer flow → 5.0.0)**
   - [ ] Existing agents/skills backed up
   - [ ] New skill installs cleanly
   - [ ] Old config migrated or reset cleanly
@@ -193,7 +193,7 @@ Cannot be deleted until all items below are verified WORKING.
   - [ ] ✅ Smooth upgrade experience
 
 - [ ] **Edge Cases**
-  - [ ] User had custom configuration in 4.6.0
+  - [ ] User had custom configuration in the legacy installer flow
   - [ ] User had Git hooks installed
   - [ ] User had multiple scopes (project + global)
   - [ ] User had all platforms configured
@@ -215,7 +215,7 @@ Cannot be deleted until all items below are verified WORKING.
   - [ ] Go hooks binary documented with examples
 
 - [ ] **Migration Guide**
-  - [ ] Step-by-step for 4.6.0 users
+  - [ ] Step-by-step for legacy installer users
   - [ ] FAQ covers common questions
   - [ ] Troubleshooting section complete
   - [ ] Links to support resources

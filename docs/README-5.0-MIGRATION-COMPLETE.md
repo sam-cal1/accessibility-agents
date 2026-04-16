@@ -19,7 +19,7 @@
 1. **MIGRATION-SAFETY-GUARANTEE.md** (339 lines)
    - Proof that ALL 14 installer features are preserved
    - Feature mapping table showing where each feature moves
-   - Side-by-side comparison of 4.6.0 vs 5.0.0 workflow
+   - Side-by-side comparison of legacy installer flow vs 5.0.0 workflow
    - Risk mitigation strategy
 
 2. **CLI-UTILITIES-SPECIFICATION.md** (598 lines)

@@ -134,7 +134,7 @@ gh skill setup  # Configuration wizard
 
 ## Complete Feature Mapping: Nothing Lost
 
-| Feature | 4.6.0 Handler | 5.0.0 Handler | Status |
+| Feature | Legacy Handler | 5.0.0 Handler | Status |
 |---------|---------------|---------------|--------|
 | **Installation** | install.ps1 | `gh skill install` | ✅ Preserved |
 | **Agent files** | Copy logic | GitHub auto-download | ✅ Better |
@@ -221,7 +221,7 @@ Detecting issues...
 
 ## New vs Old: Side-by-Side
 
-### 4.6.0 Installation
+### Legacy Installation
 Legacy script-based installation (removed in 5.0.0) used platform-specific installer scripts with prompt-driven options.
 
 ### 5.0.0 Installation
