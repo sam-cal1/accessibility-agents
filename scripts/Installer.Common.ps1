@@ -140,3 +140,170 @@ function Get-DefaultBackupPath {
 
     return Join-Path $Root ".a11y-agent-team-$Operation-backup.json"
 }
+
+function Detect-InstalledTools {
+    <#
+    .SYNOPSIS
+    Detects which development tools are available on the system.
+    Returns a hashtable of tool presence and version info for the wizard.
+    #>
+    $Tools = @{}
+
+    # Node.js
+    $NodeCmd = Get-Command node -ErrorAction SilentlyContinue
+    if ($NodeCmd) {
+        $NodeVersion = (& node --version 2>$null) -replace '^v', ''
+        $Tools.Node = @{ Available = $true; Version = $NodeVersion; Path = $NodeCmd.Source }
+    } else {
+        $Tools.Node = @{ Available = $false }
+    }
+
+    # npm
+    $NpmCmd = Get-Command npm -ErrorAction SilentlyContinue
+    $Tools.Npm = @{ Available = [bool]$NpmCmd }
+
+    # Git
+    $GitCmd = Get-Command git -ErrorAction SilentlyContinue
+    $Tools.Git = @{ Available = [bool]$GitCmd }
+
+    # Java (for veraPDF)
+    $JavaCmd = Get-Command java -ErrorAction SilentlyContinue
+    if ($JavaCmd) {
+        $JavaVersion = (& java -version 2>&1 | Select-Object -First 1) -replace '.*"(.+)".*', '$1'
+        $Tools.Java = @{ Available = $true; Version = $JavaVersion }
+    } else {
+        $Tools.Java = @{ Available = $false }
+    }
+
+    # veraPDF
+    # Get-Command relies on $env:Path being current. When verapdf is installed
+    # by choco in the same irm | iex session, the registry PATH is updated but
+    # the running session does not inherit the change. Fall back to probing
+    # known install locations so the readiness check is PATH-independent.
+    $VeraPdfCmd = Get-Command verapdf -ErrorAction SilentlyContinue
+    if (-not $VeraPdfCmd -and $env:ChocolateyInstall) {
+        # Choco sets $env:ChocolateyInstall; probe its bin dir when PATH is stale
+        $ChocoVeraPdf = Join-Path $env:ChocolateyInstall 'bin\verapdf.bat'
+        if (Test-Path $ChocoVeraPdf) { $VeraPdfCmd = $ChocoVeraPdf }
+    }
+    $Tools.VeraPdf = @{ Available = [bool]$VeraPdfCmd }
+
+    # Python 3
+    $Py3Cmd = Get-Command python3 -ErrorAction SilentlyContinue
+    if (-not $Py3Cmd) { $Py3Cmd = Get-Command python -ErrorAction SilentlyContinue }
+    $Tools.Python3 = @{ Available = [bool]$Py3Cmd }
+
+    # VS Code profiles
+    $Profiles = Get-VSCodeProfiles
+    $Tools.VSCode = @{
+        Stable = ($Profiles | Where-Object { $_.Key -eq 'stable' -and $_.Exists }) -ne $null
+        Insiders = ($Profiles | Where-Object { $_.Key -eq 'insiders' -and $_.Exists }) -ne $null
+    }
+
+    # Claude Code
+    $ClaudeCmd = Get-Command claude -ErrorAction SilentlyContinue
+    $Tools.ClaudeCode = @{ Available = [bool]$ClaudeCmd }
+
+    # Copilot CLI
+    $CopilotCliDir = Join-Path $env:USERPROFILE ".copilot"
+    $Tools.CopilotCli = @{ Available = Test-Path $CopilotCliDir }
+
+    # Codex (CLI + Desktop App + IDE all share ~/.codex/)
+    $CodexCmd = Get-Command codex -ErrorAction SilentlyContinue
+    $CodexCliDir = Join-Path $env:USERPROFILE ".codex"
+    $Tools.CodexCli = @{ Available = [bool]$CodexCmd -or (Test-Path $CodexCliDir) }
+
+    # Gemini CLI
+    $GeminiCmd = Get-Command gemini -ErrorAction SilentlyContinue
+    $Tools.GeminiCli = @{ Available = [bool]$GeminiCmd }
+
+    return $Tools
+}
+
+function Show-DetectedTools {
+    param([hashtable]$Tools)
+
+    Write-Host "  Detected tools:"
+    $Found = @()
+    if ($Tools.VSCode.Stable)      { $Found += "VS Code" }
+    if ($Tools.VSCode.Insiders)    { $Found += "VS Code Insiders" }
+    if ($Tools.Node.Available)     { $Found += "Node.js" }
+    if ($Tools.ClaudeCode.Available) { $Found += "Claude Code" }
+    if ($Tools.CopilotCli.Available) { $Found += "Copilot CLI" }
+    if ($Tools.CodexCli.Available) { $Found += "Codex" }
+    if ($Tools.GeminiCli.Available) { $Found += "Gemini CLI" }
+    if ($Tools.Python3.Available)  { $Found += "Python 3" }
+    if ($Tools.Java.Available)     { $Found += "Java" }
+    if ($Tools.VeraPdf.Available)  { $Found += "veraPDF" }
+    if ($Found.Count -eq 0) {
+        Write-Host "    (none detected)"
+    } else {
+        foreach ($Name in $Found) {
+            Write-Host "    - $Name"
+        }
+    }
+    Write-Host ""
+}
+
+function Get-RoleBasedPlatforms {
+    <#
+    .SYNOPSIS
+    Maps a user role selection to the set of platforms to install.
+    Returns a hashtable with boolean flags for each platform.
+    #>
+    param([string]$Role, [hashtable]$Tools)
+
+    switch ($Role) {
+        'developer' {
+            return @{
+                Claude = $Tools.ClaudeCode.Available
+                Copilot = $Tools.VSCode.Stable -or $Tools.VSCode.Insiders
+                CopilotCli = $Tools.CopilotCli.Available
+                CodexCli = $Tools.CodexCli.Available
+                GeminiCli = $false
+                Mcp = $Tools.Node.Available
+            }
+        }
+        'reviewer' {
+            return @{
+                Claude = $Tools.ClaudeCode.Available
+                Copilot = $Tools.VSCode.Stable -or $Tools.VSCode.Insiders
+                CopilotCli = $false
+                CodexCli = $false
+                GeminiCli = $false
+                Mcp = $Tools.Node.Available
+            }
+        }
+        'author' {
+            return @{
+                Claude = $Tools.ClaudeCode.Available
+                Copilot = $false
+                CopilotCli = $false
+                CodexCli = $false
+                GeminiCli = $false
+                Mcp = $Tools.Node.Available
+            }
+        }
+        'full' {
+            return @{
+                Claude = $Tools.ClaudeCode.Available
+                Copilot = $Tools.VSCode.Stable -or $Tools.VSCode.Insiders
+                CopilotCli = $Tools.CopilotCli.Available
+                CodexCli = $Tools.CodexCli.Available
+                GeminiCli = $Tools.GeminiCli.Available
+                Mcp = $Tools.Node.Available
+            }
+        }
+        default {
+            # 'custom' - all false, caller handles individual toggles
+            return @{
+                Claude = $false
+                Copilot = $false
+                CopilotCli = $false
+                CodexCli = $false
+                GeminiCli = $false
+                Mcp = $false
+            }
+        }
+    }
+}

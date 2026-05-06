@@ -67,6 +67,12 @@ You own everything related to form accessibility:
 - Form submission feedback
 - Password fields and visibility toggles
 
+## MCP Tools
+
+When the MCP server is available, use this tool for automated analysis:
+
+- **`check_form_labels`** -- Scan HTML content for form inputs missing associated labels. Detects inputs without `<label>`, missing `for`/`id` association, inputs relying only on `placeholder`, and missing `fieldset`/`legend` for radio/checkbox groups.
+
 ## Labels -- The Foundation
 
 Every form control MUST have a programmatically associated label. Visual proximity is not enough -- screen readers need explicit association.
@@ -82,7 +88,7 @@ Requirements:
 
 - `<label>` element with `for` attribute matching the input's `id`
 - Never use `placeholder` as the only label -- it disappears on input and has poor contrast
-- Never use `aria-label` when a visible label is possible -- sighted users benefit from visible labels too
+- Avoid `aria-label` when a visible label is achievable -- sighted users benefit from visible labels and `<label>` provides click behavior. Use `aria-label` only for icon-only controls, action buttons in dense UI (e.g., per-row table buttons), or components where a visible label would genuinely conflict with the design.
 - Label text must be descriptive. "Email address" not "Input 1"
 - Clicking a `<label>` activates its associated control (ARIA labeling via `aria-label`/`aria-labelledby` does NOT provide this click behavior -- this is why `<label>` is always preferred)
 - Implicit labels (wrapping input inside `<label>`) work but are less well-supported than explicit `for`/`id` association

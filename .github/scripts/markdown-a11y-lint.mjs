@@ -25,6 +25,10 @@ const IGNORED_DIRS = new Set([
   ".nuxt",
   "coverage",
   "vendor",
+  "codex-skills",
+  ".claude",
+  ".gemini",
+  "desktop-extension",
 ]);
 
 // ── File discovery ──────────────────────────────────────────────

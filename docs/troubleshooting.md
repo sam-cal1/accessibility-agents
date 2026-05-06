@@ -2,6 +2,79 @@
 
 ## MCP Troubleshooting
 
+### Symptom: Playwright install fails even though npm install succeeded
+
+You may see errors similar to these:
+
+- Cannot find module `playwright-core/lib/cli/program`
+- Cannot find package `playwright-core` imported from `node_modules/playwright/index.mjs`
+
+This usually means npm finished with a partial dependency graph where `playwright` exists but `playwright-core` is missing.
+
+#### What the installer now does
+
+The installer now checks for `playwright-core` after installing Playwright browser tooling.
+If `playwright-core` is missing, it attempts an automatic repair by installing `playwright-core` (matching the detected Playwright version when possible), then retries Chromium installation.
+
+If setup still fails, the installer now prints the relevant npm and Playwright error output tail instead of a generic failure message.
+
+#### Manual recovery
+
+From the MCP server folder:
+
+```bash
+cd mcp-server
+npm install playwright @axe-core/playwright
+npm install playwright-core
+npx playwright install chromium
+```
+
+Then verify Chromium resolution:
+
+```bash
+node -e "import('playwright').then(async ({ chromium }) => { const fs = await import('node:fs'); const exe = chromium.executablePath(); console.log(exe); console.log(fs.existsSync(exe)); }).catch((e) => { console.error(e.message); process.exit(1); })"
+```
+
+Expected output ends with `true` on the second line.
+
+### Run Full Post-Install Validation and Repair
+
+Use the repair scripts to run an extensive validation pass across everything the installer configured, then automatically repair common issues.
+
+Windows PowerShell:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/repair-install.ps1
+```
+
+Shell (macOS/Linux/Git Bash):
+
+```bash
+bash scripts/repair-install.sh
+```
+
+What these scripts validate and repair:
+
+- Destination paths recorded by the install summary JSON
+- MCP base dependencies (`@modelcontextprotocol/sdk`, `zod`)
+- Playwright dependency integrity (`playwright` + `playwright-core`)
+- Playwright Chromium availability and executable resolution
+- Stale duplicate Copilot assets in VS Code profile roots
+
+Outputs:
+
+- Updates install summary JSON and appends structured findings to `issues`
+- Updates `issueCount` and `lastRepairRun` metadata
+- Writes a standalone repair report:
+  - Project scope: `.a11y-agent-team-repair-summary.json`
+  - Global scope: `~/.a11y-agent-team-repair-summary.json`
+
+Recommended cadence:
+
+- Run once after install or update
+- Run in CI or scheduled maintenance for managed environments
+- Run after any npm cache reset, Node runtime change, or profile migration
+
 ### Symptom: "MCP connection refused" or Agent can't reach MCP tools
 
 #### Step 1: Verify MCP Server is Running
@@ -19,12 +92,14 @@ This shows all registered MCP servers and their connection status. Look for:
 
 #### Step 2: Check Workspace vs Profile Configuration
 
+MCP servers are configured in `mcp.json` files, not in `settings.json`.
+
 MCP servers are registered in **two possible places**:
 
-**Workspace-level** (`~/workspace/.vscode/settings.json` or `.code-workspace`):
+**Workspace-level** (`.vscode/mcp.json`):
 ```json
 {
-  "mcpServers": {
+  "servers": {
     "accessibility": {
       "command": "node",
       "args": ["path/to/mcp-server/server.js"]
@@ -33,10 +108,10 @@ MCP servers are registered in **two possible places**:
 }
 ```
 
-**Profile-level** (`~/.vscode/settings.json`):
+**Profile-level** (User/Profile `mcp.json` opened via **MCP: Open User Configuration**):
 ```json
 {
-  "mcpServers": {
+  "servers": {
     "accessibility": {
       "command": "node",
       "args": ["path/to/mcp-server/server.js"]
@@ -45,15 +120,14 @@ MCP servers are registered in **two possible places**:
 }
 ```
 
-**VS Code 1.113 Behavior:**
-- Workspace MCP servers **override** profile MCP servers with the same name
-- Both are merged if names don't conflict
-- Check **both locations** if a server is not appearing
+**VS Code Behavior:**
+- Workspace and profile MCP servers can both be loaded
+- If a server does not appear, inspect both workspace and user `mcp.json`
 
 **To Debug:**
-1. Open Settings (`Ctrl+,`)
-2. Search for "MCP" — shows active MCP configuration
-3. Look for `mcpServers` object
+1. Open Command Palette and run **MCP: Open Workspace Folder Configuration**
+2. Open Command Palette and run **MCP: Open User Configuration**
+3. Confirm each file contains a top-level `servers` object
 4. Verify `command` path is correct and executable
 5. Verify `args` array has correct server path and arguments
 
@@ -123,9 +197,9 @@ copilot /agent accessibility-lead
 3. Run `copilot /agent` without args — shows available agents; look for "MCP tools" section
 
 **If MCP not showing in Copilot CLI:**
-- MCP servers must be in **workspace-level** `.vscode/settings.json` or `.code-workspace` file
-- Profile-level MCP servers are **not** bridged to CLI
-- Move the `mcpServers` configuration to `.vscode/settings.json` in your workspace root
+- Prefer workspace-level `.vscode/mcp.json` for project-scoped tool availability
+- Confirm the server is enabled/trusted in VS Code
+- Move the MCP server definition to `.vscode/mcp.json` if it is only in user profile config
 
 ### Symptom: Agent Can't Use MCP Tools
 
@@ -159,7 +233,7 @@ Command Palette → MCP: Debug Tools
 
 Look for the tool in this list. If missing:
 1. Verify MCP server is Connected (not Failed)
-2. Check server configuration — may need to enable the tool in `mcpServers` settings
+2. Check server configuration in `.vscode/mcp.json` or user `mcp.json`
 3. Restart VS Code to reload MCP servers
 
 #### Check 3: MCP Server Permissions
@@ -180,7 +254,7 @@ If `MCP: List Servers` shows a server as **Failed** every time you restart:
 The MCP server in this repo requires:
 - **Node.js 18+** (check: `node --version`)
 - **npm or yarn** (for dependency installation)
-- **Port 8000 available** (for HTTP server; configurable in `mcp-server/server.js`)
+- **Port 3100 available** (default HTTP server port)
 
 ```bash
 # Verify Node.js version
@@ -200,31 +274,26 @@ node server.js
 ```
 
 Watch for errors:
-- `EADDRINUSE` → Port 8000 in use; change port in `server.js` line ~XX
+- `EADDRINUSE` → Port 3100 in use; set `A11Y_MCP_PORT` to a free port and restart
 - `ERR_MODULE_NOT_FOUND` → Missing dependencies; run `npm install`
 - `Permission denied` → File permission issue; check folder ownership
 
 #### Step 3: Check VS Code MCP Config
 
-In settings.json, verify the path to server is correct:
+In `.vscode/mcp.json` (workspace) or user `mcp.json`, verify the server configuration:
 
 ```json
 {
-  "mcpServers": {
+  "servers": {
     "accessibility": {
-      "command": "node",
-      "args": [
-        "/full/path/to/mcp-server/server.js"
-      ]
+      "type": "http",
+      "url": "http://127.0.0.1:3100/mcp"
     }
   }
 }
 ```
 
-**Use absolute paths**, not relative paths. Example:
-- ✅ `c:\\Users\\username\\code\\agents\\mcp-server\\server.js` (Windows)
-- ✅ `/Users/username/code/agents/mcp-server/server.js` (macOS)
-- ❌ `./mcp-server/server.js` (relative — may fail if cwd changes)
+If you use stdio mode instead of HTTP mode, use absolute paths for script arguments.
 
 #### Step 4: Enable MCP Debug Logging
 

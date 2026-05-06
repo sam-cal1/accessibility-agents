@@ -6,28 +6,13 @@ This guide walks you through removing Accessibility Agents from every platform, 
 
 Before going manual, try the automated uninstaller first:
 
-**Windows (PowerShell):**
-
-```powershell
-irm https://raw.githubusercontent.com/Community-Access/accessibility-agents/main/uninstall.ps1 | iex
-```
-
-**macOS:**
-
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Community-Access/accessibility-agents/main/uninstall.sh | bash
+gh skill uninstall Community-Access/accessibility-agents
 ```
 
 If that did not fully clean up, follow the manual steps below for each platform you installed.
 
-The automated scripts also write a summary or plan file by default:
-
-- Project scope: `.a11y-agent-team-uninstall-summary.json` or `.a11y-agent-team-uninstall-plan.json`
-- Global scope: the same file names under your home directory
-
-Use `--summary=...` on shell scripts to change that location.
-
-For PowerShell uninstall, use `-SummaryPath <path>`, `--summary <path>`, or `--summary=...`. The spaced form is the safest option for absolute Windows paths such as `C:\temp\uninstall-summary.json`.
+The legacy shell/PowerShell uninstall scripts were removed. Use the `gh skill` path above.
 
 ---
 
@@ -51,6 +36,7 @@ Each line tells you what was installed:
 | `copilot-global/central-store` | Copilot agents installed globally to VS Code profiles |
 | `codex/project` or `codex/global` | Codex CLI was installed |
 | `gemini/project` or `gemini/global` | Gemini CLI was installed |
+| `mcp/project` or `mcp/global` | MCP server was installed |
 | `scope:project` or `scope:global` | Whether this was a project or global install |
 
 If the manifest is missing, that is okay. Follow all the sections below that apply to your setup.
@@ -289,7 +275,55 @@ Remove-Item "$env:USERPROFILE\.gemini\extensions\a11y-agents" -Recurse -Force -E
 
 ---
 
-## 5. Auto-updates
+## 5. MCP server
+
+The installer copies an MCP server directory (`mcp-server/`) and registers it in VS Code settings.
+
+### Project install
+
+Remove the MCP server directory:
+
+```bash
+rm -rf ./mcp-server/
+```
+
+On Windows:
+
+```powershell
+Remove-Item .\mcp-server -Recurse -Force -ErrorAction SilentlyContinue
+```
+
+Then remove the MCP entry from `.vscode/mcp.json`. Open the file and delete the `a11y-agent-team` key from the `servers` block:
+
+```json
+"servers": {
+    "a11y-agent-team": { ... }  // <-- delete this entire entry
+}
+```
+
+### Global install
+
+The global MCP server lives inside the central store at `~/.a11y-agent-team/mcp-server/`. If you already removed the entire `~/.a11y-agent-team/` directory in section 2, there is nothing extra to do.
+
+Otherwise:
+
+```bash
+rm -rf ~/.a11y-agent-team/mcp-server/
+```
+
+On Windows:
+
+```powershell
+Remove-Item "$env:USERPROFILE\.a11y-agent-team\mcp-server" -Recurse -Force -ErrorAction SilentlyContinue
+```
+
+Then remove the MCP entry from your VS Code User MCP configuration (`mcp.json`). Open Command Palette and run **MCP: Open User Configuration**, then delete the `a11y-agent-team` key from the `servers` block.
+
+**How to verify:** In VS Code, press Ctrl+Shift+P and type "MCP: List Servers". The `a11y-agent-team` server should not appear.
+
+---
+
+## 6. Auto-updates
 
 If you enabled auto-updates during global install, they need to be removed too.
 
@@ -320,7 +354,7 @@ rm -rf ~/.claude/.a11y-agent-team-repo
 
 ---
 
-## 6. Final cleanup
+## 7. Final cleanup
 
 After removing everything above:
 

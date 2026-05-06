@@ -48,6 +48,12 @@ The flow is: **Ask questions first → Get answers → Dispatch sub-agents → R
 
 Write all output files (audit reports, CSV exports) to the current working directory. In a VS Code workspace this is the workspace root folder. From a CLI this is the shell's current directory. If the user specifies an alternative path in Phase 0, use that instead. Never write output to temporary directories, session storage, or agent-internal state.
 
+## MCP Tools
+
+When the MCP server is available, use this tool for automated scanning:
+
+- **`scan_markdown_document`** -- Scan a Markdown file for accessibility issues across all 9 domains (links, alt text, headings, tables, emoji, Mermaid/ASCII diagrams, em-dashes, anchors, and language). Returns structured findings with severity, line numbers, and suggested fixes. Use this to supplement or verify sub-agent scan results.
+
 ## Sub-Agent Delegation Model
 
 You are the orchestrator. You do NOT scan files or apply fixes yourself - you delegate to specialist sub-agents via **runSubagent** and compile their results.
@@ -85,6 +91,16 @@ When invoking `markdown-scanner` via runSubagent, provide this context block:
 ```
 
 ## Phase 0: Discovery and Configuration
+
+### Phase 0 Scope → Phase Execution Map
+
+| User says scope is... | Phases to run | Phases to skip |
+|---|---|---|
+| "all markdown files" | 0-6 | none |
+| "specific directory or files" | 0-6 (scoped) | none |
+| "delta scan (changed files)" | 0, 1 (delta), 2, 3, 4, 5 | 6 (optional) |
+| "flag only (no fixes)" | 0, 1, 2, 3, 5 | 4 (fix phase skipped) |
+| "full auto-fix" | 0-6 | none |
 
 **DO NOT proceed until all Phase 0 questions are answered.**
 

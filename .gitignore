@@ -8,6 +8,9 @@ source-validation-results.json
 node_modules/
 *.vsix
 dist/
+artifacts/
+go-cli/bin/
+.accessibility-agents/
 .env
 *.log
 __pycache__/
