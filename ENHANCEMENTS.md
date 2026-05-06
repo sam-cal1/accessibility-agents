@@ -10,6 +10,15 @@
 
 The following enhancement plans have been fully implemented and are documented in the CHANGELOG.
 
+### CI Reliability and Release Safety (v5.3.0)
+
+- Added markdown regression-only CI mode (`--regression`) with git diff scoping and safe full-scan fallback
+- Added markdown config schema validation warnings (`validateConfigSchema`) and published markdown config JSON schema
+- Added SARIF upload to GitHub Code Scanning for markdown lint with resilient upload behavior
+- Added release consistency guard workflow for manifest version alignment plus required CHANGELOG version entries
+- Added markdown scanner and orchestrator validator test suites to CI enforcement
+- Added VS Code JSON schema bindings for markdown, office, and PDF config files
+
 ### Playwright Integration (v3.2.0)
 
 All priorities P1–P7 implemented except P4.4 (component audit caching — deferred). See original plan in git history.

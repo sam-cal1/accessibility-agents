@@ -122,7 +122,32 @@ Set default behavior with repository variables:
 - `A11Y_MARKDOWN_FAIL_ON` = `none|error|warning`
 - `A11Y_MARKDOWN_FORMAT` = `text|sarif|both`
 
+For regression-only gating in CI:
+
+- `A11Y_REGRESSION_MODE` = `true|false`
+
+When enabled, the markdown scanner only gates on files changed since the baseline reference (default `HEAD~1`).
+
 You can override both via `workflow_dispatch` inputs when running the workflow manually.
+
+### Release and Version Safety Checks (v5.3)
+
+The `release-consistency-guard.yml` workflow enforces:
+
+- version alignment across `plugin.yaml`, `gemini-extension.json`, `mcp-server/package.json`, and `manifest.json`
+- required `CHANGELOG.md` entry for the current version
+
+If either check fails, the workflow fails and blocks release progression.
+
+### Editor Schema Assistance
+
+Version 5.3 includes schema-backed editor validation for config files through `.vscode/settings.json`:
+
+- `.a11y-markdown-config.json`
+- `.a11y-office-config.json`
+- `.a11y-pdf-config.json`
+
+This enables JSON completion and immediate validation feedback while editing config files.
 
 ---
 

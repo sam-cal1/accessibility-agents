@@ -26,8 +26,9 @@
 10. [Working with Files](#working-with-files)
 11. [Common Workflows and Recipes](#common-workflows-and-recipes)
 12. [Platform Comparison](#platform-comparison)
-13. [Troubleshooting](#troubleshooting)
-14. [Glossary](#glossary)
+13. [CI and Release Safeguards (v5.3)](#ci-and-release-safeguards-v53)
+14. [Troubleshooting](#troubleshooting)
+15. [Glossary](#glossary)
 
 ---
 
@@ -2656,6 +2657,57 @@ Step 5: @projects-manager Archive completed items from the previous sprint
 - **Claude Desktop + MCP** — Best for document scanning. The 24 MCP tools let Claude directly scan files, check contrast, and run axe-core without manual commands. Good for non-developers who need to audit documents.
 - **Gemini CLI** — Good for teams already using Gemini. 98 skills provide comprehensive coverage, though without the agent picker UI.
 - **Codex CLI** — Lightweight option with 11 core roles. Good for quick checks but limited compared to other platforms.
+
+---
+
+## CI and Release Safeguards (v5.3)
+
+Version 5.3 adds CI and release protections focused on markdown accessibility quality and release consistency.
+
+### Markdown CI Controls
+
+`a11y-check.yml` includes a dedicated `markdown-lint` job that supports:
+
+- gate modes: `none`, `error`, `warning`
+- output modes: `text`, `sarif`, `both`
+- regression-only scanning with `--regression`
+
+You can control this behavior from:
+
+- `workflow_dispatch` inputs (`enforcement_mode`, `output_format`, `regression_mode`)
+- repository variables (`A11Y_MARKDOWN_FAIL_ON`, `A11Y_MARKDOWN_FORMAT`, `A11Y_REGRESSION_MODE`)
+
+### Regression-Only Scanning
+
+When regression mode is enabled, the markdown scanner gates only on markdown files changed since the baseline ref (`HEAD~1` by default).
+
+- CLI: `node .github/scripts/markdown-a11y-lint.mjs . --regression --baseline-ref HEAD~1`
+- fallback behavior: if git diff is unavailable, scanner safely falls back to full-repo scan
+
+### SARIF Upload Behavior
+
+The markdown SARIF upload step to GitHub Code Scanning now uses `continue-on-error: true` and still uploads artifact output.
+
+This keeps clean runs and edge cases from causing false-negative workflow failures while preserving machine-readable scan output.
+
+### Config Schema Validation
+
+`.a11y-markdown-config.json` is validated against `.github/schemas/markdown-config.schema.json`.
+
+- unknown keys and wrong types produce warnings (non-blocking)
+- validation does not stop scans
+- editor schema mapping is configured in `.vscode/settings.json`
+
+### Release Consistency Guard
+
+`.github/workflows/release-consistency-guard.yml` enforces version alignment across:
+
+- `plugin.yaml`
+- `gemini-extension.json`
+- `mcp-server/package.json`
+- `manifest.json`
+
+It also fails the workflow if `CHANGELOG.md` is missing a section for the current version.
 
 ---
 

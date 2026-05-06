@@ -1,8 +1,8 @@
 # Product Requirements Document: A11y Agent Team
 
-**Version:** 2.5
+**Version:** 2.6
 **Author:** Community Access
-**Last Updated:** 2026-03-04
+**Last Updated:** 2026-05-06
 **Status:** Active Development (main branch)
 
 ---
@@ -230,9 +230,11 @@ The following diagram shows the pull request pipeline that triggers accessibilit
 <details>
 <summary>CI and CD architecture flowchart (text description follows)</summary>
 
-A pull_request event (opened, synchronize) triggers .github/workflows/a11y-check.yml. This runs three parallel steps: Step 1 runs a11y-lint.mjs to scan HTML, JSX, and TSX files; Step 2 runs office-a11y-scan.mjs to scan DOCX, XLSX, and PPTX files; Step 3 runs pdf-a11y-scan.mjs to scan PDF files. All three produce SARIF 2.1.0 output uploaded to GitHub Code Scanning, with error and warning annotations and exit code 1 if error-severity findings exist.
+A pull_request event triggers `.github/workflows/a11y-check.yml`. The workflow runs web, JSX/TSX, and markdown accessibility checks with optional office and PDF scans based on repository scope. The markdown job supports gate modes (`none|error|warning`), output modes (`text|sarif|both`), and regression-only scanning (`--regression`) against a git baseline. SARIF is uploaded to GitHub Code Scanning and archived as workflow artifacts.
 
-A separate weekly workflow (source-currency-check.yml) runs on Mondays at 6 AM UTC. It checks out the repo, runs check_source_currency.py against SOURCE_REGISTRY.json, and auto-opens GitHub issues when authoritative sources change.
+A separate weekly workflow (`source-currency-check.yml`) runs on Mondays at 6 AM UTC. It checks out the repo, runs `check_source_currency.py` against `SOURCE_REGISTRY.json`, and auto-opens GitHub issues when authoritative sources change.
+
+Release safety is enforced by `.github/workflows/release-consistency-guard.yml`, which validates version alignment across release manifests and fails if `CHANGELOG.md` is missing the current version section.
 
 </details>
 
@@ -828,25 +830,30 @@ The following table lists the CI scripts and the file formats each processes.
 | Script | Format | Input | Config File |
 |--------|--------|-------|-------------|
 | `a11y-lint.mjs` | HTML, JSX, TSX | File/directory paths | None |
+| `markdown-a11y-lint.mjs` | Markdown (`.md`, `.mdx`) | File/directory paths | `.a11y-markdown-config.json` |
 | `office-a11y-scan.mjs` | DOCX, XLSX, PPTX | File/directory paths | `.a11y-office-config.json` |
 | `pdf-a11y-scan.mjs` | PDF | File/directory paths | `.a11y-pdf-config.json` |
+| `validate-orchestrator-dispatch.js` | Agent contract validation | `.claude/agents/*.md` | None |
 | `check_source_currency.py` | N/A (source URLs) | SOURCE_REGISTRY.json | None |
 
 ### Common Behavior
 
-The three accessibility scanning CI scripts:
+The accessibility scanning CI scripts:
 
 - Accept file paths or directory paths as CLI arguments (default: current directory)
 - Skip `node_modules`, `.git`, `vendor`, and `dist` directories
 - Emit `::error::` and `::warning::` GitHub Actions annotations
 - Output SARIF 2.1.0 files for upload to GitHub Code Scanning
-- Exit code 0 on success, 1 on error-severity findings
+- Support configurable markdown gate behavior via `failOn` and workflow inputs/variables
+- Exit code 0 on success, 1 on enforced-severity findings
 
 ### GitHub Actions Workflows
 
 | Workflow | Trigger | Purpose |
 |----------|---------|---------|
-| `a11y-check.yml` | `pull_request` (opened, synchronize) | Runs all three a11y scan scripts |
+| `a11y-check.yml` | `pull_request` + `workflow_dispatch` | Runs accessibility scanning, markdown SARIF output, and optional regression-only markdown gating |
+| `validate-orchestrator-contracts.yml` | `pull_request` + `push` + `workflow_dispatch` | Validates orchestrator dispatch contracts and executes scanner/validator test suites |
+| `release-consistency-guard.yml` | `pull_request` + `push` + `workflow_dispatch` | Enforces release manifest version consistency and CHANGELOG version coverage |
 | `source-currency-check.yml` | Weekly cron (Monday 6 AM UTC) + workflow_dispatch | Verifies authoritative source URLs haven't changed |
 
 ---
@@ -1144,10 +1151,14 @@ Single configuration file: `.codex/AGENTS.md`
 | `.github/agents/CITATION_POLICY.md` | Source citation authority hierarchy and rules |
 | `.github/agents/SOURCE_REGISTRY.json` | Machine-readable source fingerprints (20 sources) |
 | `.github/workflows/a11y-check.yml` | CI workflow for a11y checks |
+| `.github/workflows/validate-orchestrator-contracts.yml` | CI workflow for orchestrator dispatch and reliability tests |
+| `.github/workflows/release-consistency-guard.yml` | CI workflow for version and CHANGELOG release consistency |
 | `.github/workflows/source-currency-check.yml` | Weekly source currency verification |
 | `.github/scripts/a11y-lint.mjs` | HTML/JSX accessibility linter |
+| `.github/scripts/markdown-a11y-lint.mjs` | Markdown accessibility scanner with SARIF and regression mode |
 | `.github/scripts/office-a11y-scan.mjs` | Office document scanner for CI |
 | `.github/scripts/pdf-a11y-scan.mjs` | PDF document scanner for CI |
+| `scripts/validate-orchestrator-dispatch.js` | Orchestrator-specialist dispatch contract validator |
 | `.github/scripts/check_source_currency.py` | Source currency verification script |
 | `.github/instructions/*.instructions.md` | 6 workspace instruction files |
 | `.vscode/extensions.json` | Recommended VS Code extensions |
@@ -1299,8 +1310,8 @@ Items completed since v2.0:
 | Office document rules | 46 (16 DOCX + 14 XLSX + 16 PPTX) |
 | PDF document rules | 56 (30 PDFUA + 22 PDFBP + 4 PDFQ) |
 | Source registry entries | 20 (authoritative URLs monitored) |
-| CI scripts | 3 (a11y scanning) + 1 (source currency) |
-| CI workflows | 2 (a11y-check + source-currency-check) |
+| CI scripts | 4 (a11y scanning/validation) + 1 (source currency) |
+| CI workflows | 4 (a11y-check, validate-orchestrator-contracts, release-consistency-guard, source-currency-check) |
 | Config template profiles | 7 (3 office + 3 PDF + 1 web) |
 | Supported AI platforms | 5 (Claude Code, GitHub Copilot, Gemini, Codex CLI, Claude Desktop) |
 | External runtime dependencies | 2 (`@modelcontextprotocol/sdk`, `zod`) |
