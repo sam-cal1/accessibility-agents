@@ -9,6 +9,7 @@ on:
       - "mcp-server/package.json"
       - "manifest.json"
       - "CHANGELOG.md"
+      - "RELEASE-*.md"
   pull_request:
     branches: [main]
     paths:
@@ -17,6 +18,7 @@ on:
       - "mcp-server/package.json"
       - "manifest.json"
       - "CHANGELOG.md"
+      - "RELEASE-*.md"
   workflow_dispatch:
 
 jobs:
@@ -73,3 +75,31 @@ jobs:
             echo "::error file=CHANGELOG.md::No CHANGELOG entry found for version [$PLUGIN_VER]. Add a [${PLUGIN_VER}] section before releasing."
             exit 1
           fi
+
+      - name: Verify release notes file and structure
+        run: |
+          set -euo pipefail
+          PLUGIN_VER=$(grep -E '^version:' plugin.yaml | head -1 | sed 's/version:[[:space:]]*//' | tr -d '"' | tr -d "'")
+          RELEASE_FILE="RELEASE-${PLUGIN_VER}.md"
+
+          if [ ! -f "$RELEASE_FILE" ]; then
+            echo "::error file=$RELEASE_FILE::Missing release notes file for version ${PLUGIN_VER}. Create $RELEASE_FILE before releasing."
+            exit 1
+          fi
+
+          if ! grep -qE '^## Overview' "$RELEASE_FILE"; then
+            echo "::error file=$RELEASE_FILE::Release notes must include a '## Overview' section."
+            exit 1
+          fi
+
+          if ! grep -qE '^## Highlights' "$RELEASE_FILE"; then
+            echo "::error file=$RELEASE_FILE::Release notes must include a '## Highlights' section."
+            exit 1
+          fi
+
+          if ! grep -qE '^## Full Changelog' "$RELEASE_FILE"; then
+            echo "::error file=$RELEASE_FILE::Release notes must include a '## Full Changelog' section."
+            exit 1
+          fi
+
+          echo "$RELEASE_FILE exists and includes required release sections."
