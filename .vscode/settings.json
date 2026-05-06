@@ -34,6 +34,10 @@
     {
       "fileMatch": [".a11y-pdf-config.json"],
       "url": "./.github/schemas/pdf-config.schema.json"
+    },
+    {
+      "fileMatch": [".a11y-epub-config.json"],
+      "url": "./.github/schemas/epub-config.schema.json"
     }
   ]
 }

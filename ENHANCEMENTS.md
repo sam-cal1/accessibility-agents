@@ -10,6 +10,15 @@
 
 The following enhancement plans have been fully implemented and are documented in the CHANGELOG.
 
+### CI Integrity and Playwright High-Impact Checks (Post-5.3)
+
+- Added CI guard workflow (`.github/workflows/ci-integrity-guards.yml`) for workflow invariants, config/schema drift, and doc version pin checks
+- Added validation scripts: `validate-workflow-invariants.mjs`, `validate-config-integrity.mjs`, `validate-doc-version-pins.mjs`
+- Added Playwright high-impact runtime workflow (`.github/workflows/playwright-high-impact-check.yml`)
+- Added high-impact runner script (`mcp-server/scripts/playwright-high-impact-check.mjs`) with summary and JSON artifacts
+- Added local Office/PDF/EPUB schema files and aligned template `$schema` references to eliminate config drift
+- Added PR template release-readiness checklist and published release communications/checklist docs
+
 ### CI Reliability and Release Safety (v5.3.0)
 
 - Added markdown regression-only CI mode (`--regression`) with git diff scoping and safe full-scan fallback

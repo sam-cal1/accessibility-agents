@@ -5,6 +5,28 @@ All notable changes to the Accessibility Agents project will be documented in th
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **CI integrity guard workflow**: `.github/workflows/ci-integrity-guards.yml` now validates workflow invariants, config/schema integrity, and documentation version pin freshness.
+- **New guard scripts**:
+  - `scripts/validate-workflow-invariants.mjs`
+  - `scripts/validate-config-integrity.mjs`
+  - `scripts/validate-doc-version-pins.mjs`
+- **Playwright high-impact workflow**: `.github/workflows/playwright-high-impact-check.yml` adds runtime-focused checks for serious failures.
+- **Playwright high-impact runner**: `mcp-server/scripts/playwright-high-impact-check.mjs` outputs JSON and markdown artifacts for severe runtime accessibility risk signals.
+- **Office/PDF/EPUB local schemas** added under `.github/schemas/` and wired into templates plus VS Code schema mapping.
+- **New guides**:
+  - `docs/guides/playwright-high-impact-checks.md`
+  - `docs/guides/ci-integrity-guards.md`
+
+### Changed
+
+- **PR template release checklist** expanded to include version alignment, release notes structure, and action tag freshness checks.
+- **Template schema references** for Office/PDF/EPUB profiles now point to local repository schema files.
+- **Documentation refresh** across `README.md`, `docs/getting-started.md`, `docs/USER_GUIDE.md`, and `prd.md` to cover CI guard rails and high-impact Playwright checks.
+
 ## [5.3.0] - 2026-05-07
 
 ### Added

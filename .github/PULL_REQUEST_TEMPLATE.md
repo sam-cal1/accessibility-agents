@@ -65,3 +65,10 @@ Before submitting, verify all applicable items. If an item doesn't apply, mark i
 - [ ] Sources section included at end of any new agent file or substantive guidance
 - [ ] Source URLs verified as reachable and current
 - [ ] New sources added to `SOURCE_REGISTRY.json` if they are primary references for an agent domain
+
+### Release Readiness (When Version/Release Files Change)
+
+- [ ] `plugin.yaml`, `gemini-extension.json`, `mcp-server/package.json`, and `manifest.json` versions are aligned
+- [ ] `CHANGELOG.md` contains the matching version section
+- [ ] `RELEASE-{version}.md` exists and includes `## Overview`, `## Highlights`, and `## Full Changelog`
+- [ ] Public action examples use the current tag (for example, `action@v{version}`)

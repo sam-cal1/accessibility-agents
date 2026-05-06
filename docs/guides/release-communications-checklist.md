@@ -42,8 +42,10 @@ Recommended additions:
 ## Verification
 
 - [ ] Confirm `release-consistency-guard.yml` passes on the release commit.
+- [ ] Confirm `ci-integrity-guards.yml` passes on the release commit.
 - [ ] Confirm docs lint and CI checks pass on main.
 - [ ] Confirm no stale version pins remain in public examples.
+- [ ] Review latest `branch-hygiene-report.yml` summary for stale long-lived release branches.
 
 ## Template Snippet
 

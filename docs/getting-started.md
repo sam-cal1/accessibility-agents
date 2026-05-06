@@ -130,14 +130,25 @@ When enabled, the markdown scanner only gates on files changed since the baselin
 
 You can override both via `workflow_dispatch` inputs when running the workflow manually.
 
-### Release and Version Safety Checks (v5.3)
+### Release and Version Safety Checks (v5.3+)
 
 The `release-consistency-guard.yml` workflow enforces:
 
 - version alignment across `plugin.yaml`, `gemini-extension.json`, `mcp-server/package.json`, and `manifest.json`
 - required `CHANGELOG.md` entry for the current version
+- required `RELEASE-{version}.md` file with `Overview`, `Highlights`, and `Full Changelog` sections
 
-If either check fails, the workflow fails and blocks release progression.
+If any check fails, the workflow fails and blocks release progression.
+
+### CI Integrity Guard Rails
+
+The `ci-integrity-guards.yml` workflow validates:
+
+- workflow invariants across critical CI files
+- schema/template/settings drift for markdown, office, PDF, and EPUB config files
+- documentation version pin freshness in release-facing examples
+
+See [CI Integrity Guards](guides/ci-integrity-guards.md) for local commands and extension patterns.
 
 ### Editor Schema Assistance
 
@@ -607,8 +618,21 @@ For the shortest PDF-only path, see [mcp-server/PDF-QUICKSTART.md](../mcp-server
 | `check_form_labels` | Validate form input label associations |
 | `generate_vpat` | Generate VPAT 2.5 conformance report |
 | `run_axe_scan` | Run axe-core against a live URL |
+| `run_playwright_keyboard_scan` | Detect keyboard traps and focus-order issues |
+| `run_playwright_viewport_scan` | Check viewport reflow and touch-target risk |
+| `run_playwright_contrast_scan` | Validate rendered contrast from computed styles |
+| `run_playwright_a11y_tree` | Capture browser accessibility tree snapshots |
 | `scan_office_document` | Scan DOCX, XLSX, PPTX for accessibility issues |
 | `scan_pdf_document` | Scan PDFs for PDF/UA conformance |
+
+### High-Impact Playwright Workflow
+
+For runtime regressions with significant user impact, use:
+
+- `.github/workflows/playwright-high-impact-check.yml`
+- `mcp-server/scripts/playwright-high-impact-check.mjs`
+
+This check focuses on serious accessibility failures, keyboard traps, viewport overflow, and touch target risk. See [Playwright High-Impact Checks](guides/playwright-high-impact-checks.md).
 
 ### Differences from Claude Code
 

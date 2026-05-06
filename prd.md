@@ -234,7 +234,11 @@ A pull_request event triggers `.github/workflows/a11y-check.yml`. The workflow r
 
 A separate weekly workflow (`source-currency-check.yml`) runs on Mondays at 6 AM UTC. It checks out the repo, runs `check_source_currency.py` against `SOURCE_REGISTRY.json`, and auto-opens GitHub issues when authoritative sources change.
 
-Release safety is enforced by `.github/workflows/release-consistency-guard.yml`, which validates version alignment across release manifests and fails if `CHANGELOG.md` is missing the current version section.
+Release safety is enforced by `.github/workflows/release-consistency-guard.yml`, which validates version alignment across release manifests, release notes structure, and required `CHANGELOG.md` coverage.
+
+CI hardening is enforced by `.github/workflows/ci-integrity-guards.yml`, which checks workflow invariants, config/schema drift, and documentation version pin consistency.
+
+Runtime behavioral regression coverage is provided by `.github/workflows/playwright-high-impact-check.yml`, which runs a high-impact Playwright pass focused on serious violations, keyboard traps, viewport overflow, and touch target risk.
 
 </details>
 
@@ -834,6 +838,10 @@ The following table lists the CI scripts and the file formats each processes.
 | `office-a11y-scan.mjs` | DOCX, XLSX, PPTX | File/directory paths | `.a11y-office-config.json` |
 | `pdf-a11y-scan.mjs` | PDF | File/directory paths | `.a11y-pdf-config.json` |
 | `validate-orchestrator-dispatch.js` | Agent contract validation | `.claude/agents/*.md` | None |
+| `validate-workflow-invariants.mjs` | Workflow structure/invariant guard | Workflow YAML files | None |
+| `validate-config-integrity.mjs` | Config schema/template drift guard | Templates, schemas, VS Code settings | None |
+| `validate-doc-version-pins.mjs` | Documentation version pin guard | Docs, changelog, release notes | None |
+| `playwright-high-impact-check.mjs` | Runtime high-impact web accessibility checks | Live URL | Optional (`playwright`, `@axe-core/playwright`) |
 | `check_source_currency.py` | N/A (source URLs) | SOURCE_REGISTRY.json | None |
 
 ### Common Behavior
@@ -853,7 +861,9 @@ The accessibility scanning CI scripts:
 |----------|---------|---------|
 | `a11y-check.yml` | `pull_request` + `workflow_dispatch` | Runs accessibility scanning, markdown SARIF output, and optional regression-only markdown gating |
 | `validate-orchestrator-contracts.yml` | `pull_request` + `push` + `workflow_dispatch` | Validates orchestrator dispatch contracts and executes scanner/validator test suites |
-| `release-consistency-guard.yml` | `pull_request` + `push` + `workflow_dispatch` | Enforces release manifest version consistency and CHANGELOG version coverage |
+| `release-consistency-guard.yml` | `pull_request` + `push` + `workflow_dispatch` | Enforces release manifest consistency, CHANGELOG coverage, and release-note structure |
+| `ci-integrity-guards.yml` | `pull_request` + `push` + `workflow_dispatch` | Enforces workflow invariants, config/schema integrity, and documentation version pin consistency |
+| `playwright-high-impact-check.yml` | `pull_request` + `workflow_dispatch` | Runs high-impact runtime checks (serious/critical violations, keyboard trap, overflow risk) |
 | `source-currency-check.yml` | Weekly cron (Monday 6 AM UTC) + workflow_dispatch | Verifies authoritative source URLs haven't changed |
 
 ---
@@ -1152,13 +1162,19 @@ Single configuration file: `.codex/AGENTS.md`
 | `.github/agents/SOURCE_REGISTRY.json` | Machine-readable source fingerprints (20 sources) |
 | `.github/workflows/a11y-check.yml` | CI workflow for a11y checks |
 | `.github/workflows/validate-orchestrator-contracts.yml` | CI workflow for orchestrator dispatch and reliability tests |
-| `.github/workflows/release-consistency-guard.yml` | CI workflow for version and CHANGELOG release consistency |
+| `.github/workflows/release-consistency-guard.yml` | CI workflow for version, changelog, and release-note consistency |
+| `.github/workflows/ci-integrity-guards.yml` | CI workflow for workflow/config/doc guard checks |
+| `.github/workflows/playwright-high-impact-check.yml` | CI workflow for high-impact runtime behavioral checks |
 | `.github/workflows/source-currency-check.yml` | Weekly source currency verification |
 | `.github/scripts/a11y-lint.mjs` | HTML/JSX accessibility linter |
 | `.github/scripts/markdown-a11y-lint.mjs` | Markdown accessibility scanner with SARIF and regression mode |
 | `.github/scripts/office-a11y-scan.mjs` | Office document scanner for CI |
 | `.github/scripts/pdf-a11y-scan.mjs` | PDF document scanner for CI |
 | `scripts/validate-orchestrator-dispatch.js` | Orchestrator-specialist dispatch contract validator |
+| `scripts/validate-workflow-invariants.mjs` | Workflow invariant guard script |
+| `scripts/validate-config-integrity.mjs` | Config/schema/template integrity guard script |
+| `scripts/validate-doc-version-pins.mjs` | Documentation version pin guard script |
+| `mcp-server/scripts/playwright-high-impact-check.mjs` | High-impact Playwright runtime scanner |
 | `.github/scripts/check_source_currency.py` | Source currency verification script |
 | `.github/instructions/*.instructions.md` | 6 workspace instruction files |
 | `.vscode/extensions.json` | Recommended VS Code extensions |
@@ -1310,8 +1326,8 @@ Items completed since v2.0:
 | Office document rules | 46 (16 DOCX + 14 XLSX + 16 PPTX) |
 | PDF document rules | 56 (30 PDFUA + 22 PDFBP + 4 PDFQ) |
 | Source registry entries | 20 (authoritative URLs monitored) |
-| CI scripts | 4 (a11y scanning/validation) + 1 (source currency) |
-| CI workflows | 4 (a11y-check, validate-orchestrator-contracts, release-consistency-guard, source-currency-check) |
+| CI scripts | 8 (a11y scanning/validation/guards) + 1 (source currency) |
+| CI workflows | 6 (a11y-check, validate-orchestrator-contracts, release-consistency-guard, ci-integrity-guards, playwright-high-impact-check, source-currency-check) |
 | Config template profiles | 7 (3 office + 3 PDF + 1 web) |
 | Supported AI platforms | 5 (Claude Code, GitHub Copilot, Gemini, Codex CLI, Claude Desktop) |
 | External runtime dependencies | 2 (`@modelcontextprotocol/sdk`, `zod`) |

@@ -2633,6 +2633,18 @@ Step 4: @projects-manager Show me a summary of the current sprint status
 Step 5: @projects-manager Archive completed items from the previous sprint
 ```
 
+### Recipe 13: High-Impact Playwright Verification
+
+**Goal:** Catch severe runtime accessibility regressions before release.
+
+```text
+Step 1: Run workflow .github/workflows/playwright-high-impact-check.yml (manual or PR trigger)
+Step 2: Provide preview URL (or use local example fallback)
+Step 3: Review artifacts/playwright-high-impact-summary.md
+Step 4: Fix serious issues first (keyboard trap, overflow, critical/serious rules)
+Step 5: Re-run workflow until result is PASS
+```
+
 ---
 
 ## Platform Comparison
@@ -2725,6 +2737,23 @@ It also fails the workflow if `CHANGELOG.md` is missing a section for the curren
 If you open a subfolder of a monorepo, agents in the parent folder won't be found by default.
 
 **Fix:** Enable `chat.useCustomizationsInParentRepositories` in VS Code settings. This tells Copilot to look in parent directories up to the repository root.
+
+### CI Guards Failing on Release or Config Changes
+
+If `ci-integrity-guards.yml` fails, check these first:
+
+1. `plugin.yaml` version matches release docs and changelog sections
+2. `RELEASE-{version}.md` exists and has required headings
+3. `.vscode/settings.json` schema mappings match files in `.github/schemas/`
+4. Config templates in `templates/` still point to local schema files
+
+Run local validators before pushing:
+
+```bash
+node scripts/validate-workflow-invariants.mjs
+node scripts/validate-config-integrity.mjs
+node scripts/validate-doc-version-pins.mjs
+```
 
 ### Claude Code: Edit Gate Blocking Edits
 

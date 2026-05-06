@@ -485,6 +485,8 @@ The following guides cover advanced configuration, cross-platform handoff, and d
 | [Metadata and Markup Conventions](docs/guides/metadata-markup-conventions.md) | Recommended metadata fields and markdown structure conventions for agents, skills, and instructions |
 | [Plugin Packaging](docs/advanced/plugin-packaging.md) | Packaging and distributing agents for different environments |
 | [Platform References](docs/advanced/platform-references.md) | External documentation sources with feature-to-source mapping |
+| [Playwright High-Impact Checks](docs/guides/playwright-high-impact-checks.md) | High-impact runtime accessibility checks for keyboard traps, serious violations, and viewport risk |
+| [CI Integrity Guards](docs/guides/ci-integrity-guards.md) | Guard rails for workflow invariants, config/schema drift, and documentation version pin checks |
 | [Release Communications Checklist](docs/guides/release-communications-checklist.md) | Repeatable release messaging checklist for changelog, notes, publish, and announcements |
 | [Experimental Codex Multi-Agent Roles](docs/guides/codex-experimental-multi-agent.md) | Optional TOML-based Codex roles for focused accessibility passes |
 | [Research Sources](docs/RESEARCH-SOURCES.md) | Authoritative sources (W3C APG, WebAIM, WCAG 2.2, Deque) that informed every agent rule |

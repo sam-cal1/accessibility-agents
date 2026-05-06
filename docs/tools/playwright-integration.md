@@ -95,6 +95,23 @@ Both packages are optional peer dependencies. All existing workflows continue to
 - **web-accessibility-wizard** — Dispatches playwright-scanner in Phase 10
 - **web-issue-fixer** — Dispatches playwright-verifier after each fix
 
+## CI Workflow: High-Impact Mode
+
+A dedicated workflow now supports high-impact behavioral checks:
+
+- Workflow: `.github/workflows/playwright-high-impact-check.yml`
+- Script: `mcp-server/scripts/playwright-high-impact-check.mjs`
+- Artifacts: `artifacts/playwright-high-impact.json` and `artifacts/playwright-high-impact-summary.md`
+
+The workflow focuses on severe risk indicators:
+
+- serious and critical axe violations
+- potential keyboard traps
+- horizontal overflow at narrow viewports
+- undersized touch targets
+
+For full usage details, see [Playwright High-Impact Checks](../guides/playwright-high-impact-checks.md).
+
 ## Security
 
 - URLs validated to http/https protocols only (no file://, javascript:, data:)

@@ -1,4 +1,5 @@
 {
+  "$schema": "./.github/schemas/pdf-config.schema.json",
   "description": "Minimal PDF profile — errors only. Best for triaging large PDF libraries.",
   "enabled": true,
   "disabledRules": [],
