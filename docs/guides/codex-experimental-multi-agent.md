@@ -38,6 +38,14 @@ When spawning a named Accessibility Agents subagent, pass task context explicitl
 instead of requesting a full-history fork. Codex rejects typed custom-agent
 spawns that also try to inherit the full parent history.
 
+If the active tool list does not show `multi_agent_v1.spawn_agent`, the router
+must call `tool_search` for multi-agent subagent tooling before claiming
+subagents are unavailable. A local-only review is not an acceptable silent
+fallback for Accessibility Agents workflows; if tool discovery still cannot
+expose subagents, stop and ask the user to enable subagents or explicitly
+approve a local fallback. Spawned Accessibility Agents subagents should receive
+the router skill context so they follow the same lead-first dispatch contract.
+
 ## What Gets Installed
 
 When you select Codex support, the universal installer installs:

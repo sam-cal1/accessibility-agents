@@ -102,7 +102,12 @@ if (fs.existsSync(webRouterSkill)) {
   for (const phrase of [
     'Explicitly spawn `accessibility-lead` as a Codex custom subagent',
     "Installing Accessibility Agents for Codex is the user's standing request",
+    'call `tool_search` for `multi-agent subagent accessibility`',
+    'Do not downgrade to local-only review just because the spawn tool was lazy-loaded',
+    'stop and ask the user to enable subagents/Accessibility Agents',
     'do not request a full-history fork',
+    'Pass skill context to every spawned Accessibility Agents subagent',
+    '"type": "skill", "name": "web-accessibility"',
     '~/.agents/plugins/a11y-agents-codex/references/specialists/',
     'Dispatch matching Codex custom subagents by default',
     'Do not make users manually name every specialist',
