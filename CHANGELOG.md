@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.0] - 2026-06-15
+
+### Added
+
+- **Native Codex plugin distribution** with router skills, Codex custom subagents, lazy specialist references, and built-in extension manifests.
+- **Codex web accessibility router** that starts `accessibility-lead`, selects relevant specialists, passes skill context, and falls back to root-session specialist dispatch when nested dispatch is unavailable.
+- **Codex lifecycle hook guard** for UI work:
+  - `UserPromptSubmit` injects the lead-plus-specialists dispatch requirement.
+  - `SubagentStart` and `SubagentStop` track lead and specialist lifecycle.
+  - `PreToolUse` blocks UI edits until `accessibility-lead` starts.
+  - `Stop` blocks final answers until the lead and required specialists complete.
+- **Codex dispatch smoke test** (`scripts/codex-accessibility-dispatch-smoke.mjs`) with source checks and optional live verification that lead and specialists spawn and complete.
+- **Built-in extension registry** for core, web, documents, markdown, GitHub, and developer-tools domains, using the same manifest structure intended for third-party extensions.
+- **Extension marketplace groundwork** for reviewed community extensions, contributor-facing extension documentation, and private administrator review workflow separation.
+
+### Changed
+
+- **Universal installer Codex support** now installs the Codex plugin payload, router skills, custom subagents, built-in extensions, compatible model-stamped agents, plugin marketplace entry, and a single user-level hook guard in `~/.codex/hooks.json`.
+- **Codex hook registration** now uses the installer-managed user-level hook path only, avoiding duplicate `UserPromptSubmit` context from plugin-bundled and user-level hook registration.
+- **Codex subagent model handling** no longer hard-pins legacy role templates to `gpt-5`; installed Codex agents are stamped with the configured compatible model.
+- **Release readiness** now includes Codex plugin structure validation and Codex accessibility dispatch source smoke checks.
+- **Release consistency validation** now checks `manifest.json` alongside `plugin.yaml`, `gemini-extension.json`, and `mcp-server/package.json`.
+
+### Fixed
+
+- Fixed Codex sessions that loaded the web accessibility skill but continued locally without dispatching `accessibility-lead`.
+- Fixed partial-dispatch behavior where Codex spawned the lead but finalized before specialist review completed.
+- Fixed duplicate Codex hook context caused by registering the same hook through both the plugin manifest and `~/.codex/hooks.json`.
+- Fixed Codex hook marker matching when subagent lifecycle events use child session or parent thread identifiers different from the parent edit hook.
+- Fixed targeted ARIA review prompts such as "look for extraneous ARIA regions" not triggering the accessibility dispatch hook.
+- Fixed overly broad specialist selection where targeted ARIA review language could fan out to the full web audit team.
+
 ## [5.4.0] - 2026-05-06
 
 ### Added

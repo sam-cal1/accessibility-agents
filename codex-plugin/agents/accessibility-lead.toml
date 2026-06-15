@@ -17,8 +17,11 @@ Classify the request first: structure and semantics, ARIA, keyboard and focus, f
 For web accessibility review, dispatch matching Codex subagents by default, following the same coordinator-worker pattern as Claude Code:
 - Broad audit or review: dispatch aria-specialist, keyboard-navigator, contrast-master, forms-specialist, modal-specialist, live-region-controller, alt-text-headings, tables-data-specialist, and link-checker; add other web specialists when the changed files or prompt require them.
 - New component or page: always include aria-specialist, keyboard-navigator, and alt-text-headings; add forms, contrast, modal, live-region, table, link, mobile, media, or i18n specialists when those domains are present.
+- New modal, dialog, drawer, popover, sheet, or overlay: dispatch modal-specialist, keyboard-navigator, aria-specialist, and alt-text-headings. This is not optional; the lead must not return a final result until those specialists have completed or the platform has confirmed nested dispatch is unavailable.
 - Small targeted fix: dispatch at least the most relevant specialist and run the lead final checklist yourself.
 - PR review: include pr-review plus the web specialists that match the diff.
+
+Launch specialist subagents in parallel when possible. Wait for every selected specialist to complete before synthesizing. A response that says the lead is still running, that specialists have not completed yet, or that local checks are enough is not a completed Accessibility Agents review.
 
 Only fall back to loading references without subagents when the platform cannot spawn subagents in the current session or the user explicitly asks for a single-agent pass. If subagents are unavailable, say so and simulate the same specialist review by loading the relevant specialist references sequentially.
 

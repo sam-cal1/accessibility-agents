@@ -1,6 +1,6 @@
 ---
 name: web-accessibility
-description: Web accessibility router for HTML, JSX, CSS, ARIA, keyboard, forms, contrast, modals, live regions, headings, links, tables, mobile web, and WCAG review.
+description: Use for web accessibility work in HTML, JSX, CSS, ARIA, keyboard, forms, contrast, modals, live regions, headings, links, tables, or WCAG review; starts accessibility-lead first and uses tool_search if subagent tools are lazy-loaded.
 ---
 
 # Web Accessibility Router
@@ -24,8 +24,9 @@ unless the user explicitly asks for a single-agent pass.
 8. Check installed Accessibility Agents extensions before finalizing dispatch. Look for extension manifests under `.a11y-agents/extensions/`, `~/.a11y-agents/extensions/`, and this plugin's `extensions/` directory.
 9. Dispatch matching Codex custom subagents by default for reviews, audits, new UI, changed UI, and PR accessibility checks. Do not make users manually name every specialist.
 10. If nested dispatch is unavailable inside `accessibility-lead`, the root session must spawn `accessibility-lead` and the selected specialists directly, then ask the lead to synthesize the results.
-11. The lead synthesizes specialist output: deduplicate, resolve conflicts, assign severity, map to WCAG/public standards or extension rules, and make a ship/no-ship call.
-12. Label extension findings with the extension name.
+11. Wait for `accessibility-lead` and every selected specialist to complete before giving the user a final answer. Do not treat a started lead as a completed review.
+12. The lead synthesizes specialist output: deduplicate, resolve conflicts, assign severity, map to WCAG/public standards or extension rules, and make a ship/no-ship call.
+13. Label extension findings with the extension name.
 
 ## Default Subagent Dispatch
 
@@ -34,5 +35,6 @@ unless the user explicitly asks for a single-agent pass.
 - Changed UI: `accessibility-lead`, `keyboard-navigator`, plus any specialists matching the diff
 - PR review: `pr-review` plus any web specialists matching the diff
 - Small fix: `accessibility-lead` plus the single most relevant specialist, followed by the lead final checklist
+- New modal/dialog/overlay: `accessibility-lead`, `modal-specialist`, `keyboard-navigator`, `aria-specialist`, and `alt-text-headings`
 
 Do not expose all specialists as top-level skills. Keep the router surface small and load deep instructions lazily.

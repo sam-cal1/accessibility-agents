@@ -46,6 +46,35 @@ expose subagents, stop and ask the user to enable subagents or explicitly
 approve a local fallback. Spawned Accessibility Agents subagents should receive
 the router skill context so they follow the same lead-first dispatch contract.
 
+There is no Codex config switch today that auto-spawns a custom subagent solely
+because a skill matched. Accessibility Agents makes the workflow as seamless as
+Codex allows by keeping the visible router description explicit, treating the
+installation as standing authorization to dispatch the lead, and validating that
+the router refuses silent local-only fallback.
+
+The Codex plugin ships lifecycle hook files as a guardrail, and the installer
+registers those files once in `~/.codex/hooks.json` for current Codex builds:
+
+- `UserPromptSubmit` adds model-visible context when the user asks for UI or web work.
+- `SubagentStart` records that `accessibility-lead` and tracked web specialists started for the current turn.
+- `SubagentStop` records that `accessibility-lead` and tracked web specialists completed for the current turn.
+- `PreToolUse` blocks UI file edits through supported edit tools until that turn has an `accessibility-lead` dispatch marker.
+- `Stop` blocks the final response for UI or web work until `accessibility-lead` and the required specialists have completed.
+
+Hooks are the enforcement layer, not the dispatcher. The model still needs to use
+the router skill and spawn `accessibility-lead`; the hook prevents the common
+failure mode where Codex notices the skill but decides to continue locally. It
+also prevents the partial-dispatch failure mode where Codex starts the lead,
+keeps working, and finalizes before the lead and specialists synthesize results.
+Current Codex builds expose `hooks` as a stable feature while `plugin_hooks`
+appears removed in `codex features list`; the user-level hook registration is
+the active enforcement path. The plugin manifest intentionally does not
+advertise hooks directly, because running both plugin-bundled hooks and the
+user-level registration duplicates `UserPromptSubmit` context.
+Codex requires non-managed command hooks to be reviewed and trusted before they
+run, so a fresh install may prompt the user once before enforcement becomes
+active.
+
 ## What Gets Installed
 
 When you select Codex support, the universal installer installs:
@@ -55,11 +84,31 @@ When you select Codex support, the universal installer installs:
 - all built-in Codex custom subagents
 - lazy specialist reference files
 - built-in extension manifests
+- the Codex lifecycle hook guard for UI edit enforcement
+- a user-level `~/.codex/hooks.json` mirror of the hook guard for current Codex builds
 - install manifest entries for repair and uninstall
 
 The old direct Codex skill pack remains in the repository as a fallback source, but the v6 installer prefers the plugin path.
 
-For Codex marketplace loading, the installed marketplace entry uses the relative plugin path `./a11y-agents-codex`. Absolute local paths are rejected by Codex marketplace loading and will make Codex skip the plugin payload.
+For Codex marketplace loading, the installed marketplace entry uses the relative plugin path `./.agents/plugins/a11y-agents-codex`. Codex resolves personal marketplace paths from the home directory, not from the `~/.agents/plugins` folder itself. Absolute local paths are rejected by Codex marketplace loading and will make Codex skip the plugin payload.
+
+The installer also runs:
+
+```bash
+codex plugin add a11y-agents-codex@accessibility-agents
+```
+
+That step is required for hooks. A visible router skill alone does not prove the
+Codex plugin is installed, because the installer also mirrors router skills and
+custom agents into global fallback locations. If `codex plugin list` shows
+`a11y-agents-codex@accessibility-agents` as `not installed`, the hook guard will
+not run even though the web-accessibility skill may still load.
+
+The installer also writes `~/.codex/hooks.json` with the Accessibility Agents
+guard. In interactive Codex, open `/hooks`, review the Accessibility Agents hook
+entries, and trust them. For automated smoke tests only, use
+`--dangerously-bypass-hook-trust` to prove the hook behavior without persisting
+trust.
 
 ## Router Skills
 
@@ -138,7 +187,13 @@ This list is intentionally broad. The point of the router layer is that Codex do
 
 ## How to Ask Codex to Use Subagents
 
-Codex does not need to spawn subagents for every small request. Use subagents when a task benefits from independent specialist review.
+For web accessibility work, the installed router should spawn
+`accessibility-lead` first by default. For non-web domains, use subagents when a
+task benefits from independent specialist review or when a lead router applies.
+For UI work, the final answer should come only after the lead and selected
+specialists complete. If nested dispatch inside `accessibility-lead` is blocked
+by a Codex limit, the root session must spawn the selected specialists directly
+and ask the lead to synthesize their completed findings.
 
 Good requests:
 
@@ -222,9 +277,11 @@ If Codex does not seem to see the plugin:
 3. Confirm the router skills were installed.
 4. Confirm `.codex/agents/` or the global Codex agent directory contains Accessibility Agents TOML files.
 5. Confirm built-in extension manifests were installed.
-6. Confirm Codex config contains `[agents]` with `max_depth = 2`.
-7. Confirm the Codex marketplace entry points to `./a11y-agents-codex`.
-8. Ask Codex to use a router skill or a named lead agent.
+6. Confirm `~/.codex/hooks.json` contains `a11y-codex-dispatch-guard.mjs`.
+7. Confirm Codex config contains `[agents]` with `max_depth = 2`.
+8. Confirm the Codex marketplace entry points to `./.agents/plugins/a11y-agents-codex`.
+9. Run `codex plugin list` and confirm `a11y-agents-codex@accessibility-agents` says `installed, enabled`.
+10. Ask Codex to use a router skill or a named lead agent.
 
 If Codex reports shortened skill descriptions, the old direct skill pack may still be installed. Re-run the v6 installer so Codex uses the plugin path and small router surface. The v6 installer prunes Accessibility Agents-owned legacy skill mirrors from `.codex/skills` while leaving unrelated personal skills alone.
 
@@ -234,8 +291,19 @@ Before claiming Codex support works:
 
 ```bash
 node scripts/validate-codex-plugin.js
+node scripts/codex-accessibility-dispatch-smoke.mjs
 bash -n install.sh
 ```
+
+After installing Codex support locally, maintainers can run the live smoke test:
+
+```bash
+node scripts/codex-accessibility-dispatch-smoke.mjs --live
+```
+
+The live test starts a read-only Codex session and expects
+`accessibility-lead` to spawn without using a local-only fallback. Do not run the
+live test in normal CI because it consumes Codex model/tool budget.
 
 Also run the general agent validators:
 

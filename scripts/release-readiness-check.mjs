@@ -13,6 +13,8 @@ const checks = [
   { name: "Workflow invariants", cmd: "node", args: ["scripts/validate-workflow-invariants.mjs"] },
   { name: "Config integrity", cmd: "node", args: ["scripts/validate-config-integrity.mjs"] },
   { name: "Doc version pins", cmd: "node", args: ["scripts/validate-doc-version-pins.mjs"] },
+  { name: "Codex plugin surface", cmd: "node", args: ["scripts/validate-codex-plugin.js"] },
+  { name: "Codex accessibility dispatch source smoke", cmd: "node", args: ["scripts/codex-accessibility-dispatch-smoke.mjs"] },
 ];
 
 let failed = false;

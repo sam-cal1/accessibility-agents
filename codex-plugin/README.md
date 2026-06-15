@@ -33,6 +33,9 @@ The universal installer owns installation. Users should not need to manually cop
 `extensions/`
 : Built-in extension manifests and extension authoring documentation.
 
+`hooks/`
+: Codex lifecycle hooks that require `accessibility-lead` dispatch before UI file edits.
+
 `.codex-plugin/plugin.json`
 : Plugin metadata for Codex plugin discovery.
 
@@ -45,10 +48,25 @@ Router skills solve that problem:
 1. Codex sees a small number of broad skills.
 2. The router identifies the task domain.
 3. The router loads only the specialist references needed for that task.
-4. The router can dispatch Codex subagents when the user asks for a multi-specialist pass.
+4. The web router treats installation as standing authorization to dispatch `accessibility-lead` for web accessibility work.
 5. Installed extensions are considered as first-class contributors.
 
 The router layer is intentionally small. Specialist knowledge stays available without crowding the initial skill list.
+
+## Dispatch Guard Hooks
+
+The plugin includes Codex lifecycle hook files for the universal installer to
+register as a single user-level guard for UI work:
+
+- `UserPromptSubmit` detects UI and web prompts and injects the lead-dispatch requirement.
+- `SubagentStart` records when `accessibility-lead` and tracked web specialists have started for the current turn.
+- `SubagentStop` records when `accessibility-lead` and tracked web specialists have completed for the current turn.
+- `PreToolUse` blocks edits to UI files until `accessibility-lead` has been dispatched in that same turn.
+- `Stop` blocks final answers until `accessibility-lead` and required specialists have completed.
+
+This is intentionally paired with the router skill. The hook enforces the rule at the edit boundary, while the router still owns the dispatch plan and specialist selection. If Codex has lazy-loaded the subagent tool, the router must use `tool_search` before claiming subagents are unavailable.
+
+The Codex plugin manifest does not advertise hooks directly. The universal installer writes the hook guard into `~/.codex/hooks.json` because current Codex builds load normal hooks consistently while plugin-bundled hooks can also be loaded in some sessions, which would duplicate `UserPromptSubmit` context. Codex requires users to review and trust non-managed command hooks before they run. After the hook is trusted, users should not need to manually name every specialist for ordinary UI accessibility work.
 
 ## Router Skills
 
@@ -157,7 +175,15 @@ On Windows:
 
 Select Codex support when prompted. The installer copies the plugin, router skills, custom subagents, specialist references, and extension manifests.
 
-After installing or updating Codex subagents, start a new Codex session so Codex picks up the new files.
+After installing or updating Codex subagents or hooks, start a new Codex session so Codex picks up the new files. If Codex asks you to review the Accessibility Agents plugin hook definition, trust it to enable the UI edit guard.
+
+If Codex shows a hooks review notice, open `/hooks`, review the Accessibility Agents entries that run `a11y-codex-dispatch-guard.mjs`, and trust them.
+
+The Codex hook guard now tracks the full UI review lifecycle. It injects the
+lead-plus-specialists requirement for UI prompts, records `SubagentStart` and
+`SubagentStop` for the lead and tracked web specialists, blocks UI edits until
+the lead has started, and blocks the final answer until the lead and required
+specialists have completed.
 
 ## Expected User Experience
 
@@ -183,12 +209,19 @@ When changing the Codex plugin:
 - update the universal installer when install paths change
 - update validator coverage in `scripts/validate-codex-plugin.js`
 - update docs when extension behavior changes
+- keep the Codex hook guard aligned with the router skill dispatch contract
 
 Validation:
 
 ```bash
 node scripts/validate-codex-plugin.js
+node scripts/codex-accessibility-dispatch-smoke.mjs
 bash -n install.sh
 ```
+
+Run `node scripts/codex-accessibility-dispatch-smoke.mjs --live` after a local
+Codex install when you need proof that `accessibility-lead` actually spawns.
+The live check is intentionally not a default CI gate because it spends Codex
+model/tool budget.
 
 Also run the repository agent validators before release.

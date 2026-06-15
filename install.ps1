@@ -1509,12 +1509,14 @@ if ($InstallCodex -and ((Test-Path $CodexPluginSrc) -or (Test-Path $CodexSkillsS
         $CodexTargetDir = Join-Path (Get-Location) ".codex"
         $CodexAgentsProfileDir = Join-Path (Get-Location) ".agents"
         $CodexPluginDst = Join-Path (Join-Path $CodexAgentsProfileDir "plugins") "a11y-agents-codex"
+        $CodexMarketplacePluginPath = "./.agents/plugins/a11y-agents-codex"
         $CodexExtensionDst = Join-Path (Get-Location) ".a11y-agents\extensions"
     }
     else {
         $CodexTargetDir = Join-Path $env:USERPROFILE ".codex"
         $CodexAgentsProfileDir = Join-Path $env:USERPROFILE ".agents"
         $CodexPluginDst = Join-Path (Join-Path $CodexAgentsProfileDir "plugins") "a11y-agents-codex"
+        $CodexMarketplacePluginPath = "./.agents/plugins/a11y-agents-codex"
         $CodexExtensionDst = Join-Path $env:USERPROFILE ".a11y-agents\extensions"
     }
 
@@ -1711,7 +1713,7 @@ if ($InstallCodex -and ((Test-Path $CodexPluginSrc) -or (Test-Path $CodexSkillsS
                 plugins = @(
                     @{
                         name = "a11y-agents-codex"
-                        source = @{ source = "local"; path = "./a11y-agents-codex" }
+                        source = @{ source = "local"; path = $CodexMarketplacePluginPath }
                         policy = @{ installation = "INSTALLED_BY_DEFAULT"; authentication = "ON_INSTALL" }
                         category = "Developer Tools"
                     }
@@ -1723,7 +1725,7 @@ if ($InstallCodex -and ((Test-Path $CodexPluginSrc) -or (Test-Path $CodexSkillsS
         }
         elseif ((Get-Content -Path $CodexMarketplaceJson -Raw) -match '"a11y-agents-codex"') {
             $MarketplaceRaw = Get-Content -Path $CodexMarketplaceJson -Raw
-            if ($MarketplaceRaw -match '"path"\s*:\s*"\./a11y-agents-codex"') {
+            if ($MarketplaceRaw -match ('"path"\s*:\s*"' + [regex]::Escape($CodexMarketplacePluginPath) + '"')) {
                 Write-Host "    + Codex plugin marketplace already includes a11y-agents-codex"
             }
             else {
@@ -1731,7 +1733,7 @@ if ($InstallCodex -and ((Test-Path $CodexPluginSrc) -or (Test-Path $CodexSkillsS
                 $FoundCodexPlugin = $false
                 foreach ($Plugin in $Marketplace.plugins) {
                     if ($Plugin.name -eq "a11y-agents-codex") {
-                        $Plugin.source = [PSCustomObject]@{ source = "local"; path = "./a11y-agents-codex" }
+                        $Plugin.source = [PSCustomObject]@{ source = "local"; path = $CodexMarketplacePluginPath }
                         if (-not $Plugin.policy) {
                             $Plugin | Add-Member -NotePropertyName "policy" -NotePropertyValue ([PSCustomObject]@{ installation = "INSTALLED_BY_DEFAULT"; authentication = "ON_INSTALL" })
                         }
@@ -1744,7 +1746,7 @@ if ($InstallCodex -and ((Test-Path $CodexPluginSrc) -or (Test-Path $CodexSkillsS
                 if (-not $FoundCodexPlugin) {
                     $Marketplace.plugins += [PSCustomObject]@{
                         name = "a11y-agents-codex"
-                        source = [PSCustomObject]@{ source = "local"; path = "./a11y-agents-codex" }
+                        source = [PSCustomObject]@{ source = "local"; path = $CodexMarketplacePluginPath }
                         policy = [PSCustomObject]@{ installation = "INSTALLED_BY_DEFAULT"; authentication = "ON_INSTALL" }
                         category = "Developer Tools"
                     }
@@ -1758,6 +1760,87 @@ if ($InstallCodex -and ((Test-Path $CodexPluginSrc) -or (Test-Path $CodexSkillsS
             Write-Host "    ! Existing Codex marketplace left unchanged at $CodexMarketplaceJson"
             Write-Host "      Router skills and subagents were installed directly."
         }
+
+        $CodexCmd = Get-Command codex -ErrorAction SilentlyContinue
+        if ($CodexCmd) {
+            & codex plugin add "a11y-agents-codex@accessibility-agents" | Out-Null
+            if ($LASTEXITCODE -eq 0) {
+                Add-ManifestEntry "codex-plugin-enabled/name:a11y-agents-codex@accessibility-agents"
+                Write-Host "    + Codex plugin installed and enabled for hooks"
+            }
+            else {
+                Write-Host "    ! Could not auto-enable the Codex plugin with 'codex plugin add'"
+                Write-Host "      Run: codex plugin add a11y-agents-codex@accessibility-agents"
+            }
+        }
+        else {
+            Write-Host "    ! Codex CLI not found; plugin marketplace was written but not enabled"
+            Write-Host "      Run after installing Codex: codex plugin add a11y-agents-codex@accessibility-agents"
+        }
+
+        $CodexHooksJson = Join-Path $CodexTargetDir "hooks.json"
+        $CodexHookScript = Join-Path (Join-Path $CodexPluginDst "hooks") "a11y-codex-dispatch-guard.mjs"
+        $HookData = if (Test-Path $CodexHooksJson) {
+            Get-Content -Path $CodexHooksJson -Raw | ConvertFrom-Json
+        }
+        else {
+            [PSCustomObject]@{}
+        }
+        if (-not $HookData.PSObject.Properties["hooks"]) {
+            $HookData | Add-Member -NotePropertyName "hooks" -NotePropertyValue ([PSCustomObject]@{})
+        }
+        function Set-CodexHookEntry {
+            param(
+                [object]$HookData,
+                [string]$EventName,
+                [object]$Entry
+            )
+            if (-not $HookData.hooks.PSObject.Properties[$EventName]) {
+                $HookData.hooks | Add-Member -NotePropertyName $EventName -NotePropertyValue @()
+            }
+            $Existing = @($HookData.hooks.$EventName)
+            $Updated = @()
+            $Replaced = $false
+            foreach ($Item in $Existing) {
+                $Serialized = $Item | ConvertTo-Json -Depth 20 -Compress
+                if ($Serialized -match "a11y-codex-dispatch-guard\.mjs") {
+                    if (-not $Replaced) {
+                        $Updated += $Entry
+                        $Replaced = $true
+                    }
+                }
+                else {
+                    $Updated += $Item
+                }
+            }
+            if (-not $Replaced) {
+                $Updated += $Entry
+            }
+            $HookData.hooks.$EventName = $Updated
+        }
+        $CodexHookCommand = "node $CodexHookScript"
+        Set-CodexHookEntry -HookData $HookData -EventName "UserPromptSubmit" -Entry ([PSCustomObject]@{
+            hooks = @([PSCustomObject]@{ type = "command"; command = $CodexHookCommand; statusMessage = "Checking Accessibility Agents dispatch" })
+        })
+        Set-CodexHookEntry -HookData $HookData -EventName "SubagentStart" -Entry ([PSCustomObject]@{
+            matcher = "^(accessibility-lead|aria-specialist|keyboard-navigator|contrast-master|forms-specialist|modal-specialist|live-region-controller|alt-text-headings|tables-data-specialist|link-checker|web-accessibility-wizard)$"
+            hooks = @([PSCustomObject]@{ type = "command"; command = $CodexHookCommand; statusMessage = "Recording Accessibility Agents dispatch" })
+        })
+        Set-CodexHookEntry -HookData $HookData -EventName "SubagentStop" -Entry ([PSCustomObject]@{
+            matcher = "^(accessibility-lead|aria-specialist|keyboard-navigator|contrast-master|forms-specialist|modal-specialist|live-region-controller|alt-text-headings|tables-data-specialist|link-checker|web-accessibility-wizard)$"
+            hooks = @([PSCustomObject]@{ type = "command"; command = $CodexHookCommand; statusMessage = "Recording Accessibility Agents completion" })
+        })
+        Set-CodexHookEntry -HookData $HookData -EventName "PreToolUse" -Entry ([PSCustomObject]@{
+            matcher = "apply_patch|Edit|Write"
+            hooks = @([PSCustomObject]@{ type = "command"; command = $CodexHookCommand; statusMessage = "Enforcing Accessibility Agents review" })
+        })
+        Set-CodexHookEntry -HookData $HookData -EventName "Stop" -Entry ([PSCustomObject]@{
+            hooks = @([PSCustomObject]@{ type = "command"; command = $CodexHookCommand; statusMessage = "Checking Accessibility Agents synthesis"; timeout = 30 })
+        })
+        New-Item -ItemType Directory -Force -Path (Split-Path -Parent $CodexHooksJson) | Out-Null
+        $HookData | ConvertTo-Json -Depth 20 | Set-Content -Path $CodexHooksJson -Encoding UTF8
+        Add-ManifestEntry "codex-hooks/path:$CodexHooksJson"
+        Write-Host "    + Codex user-level hook guard installed to $CodexHooksJson"
     }
     if ((-not (Test-Path $CodexPluginSrc)) -and (Test-Path $CodexConfigSrc)) {
         $CodexConfigDst = Join-Path $CodexTargetDir "config.toml"
@@ -1801,8 +1884,9 @@ if ($InstallCodex -and ((Test-Path $CodexPluginSrc) -or (Test-Path $CodexSkillsS
     Write-Host ""
     Write-Host "  Codex will now load the Accessibility Agents router skills."
     Write-Host "  Codex subagents are available after starting a new Codex session."
-    Write-Host "  Codex hook support exists upstream, but it is currently experimental and"
-    Write-Host "  only intercepts Bash/local-shell flows, not all file-edit tools."
+    Write-Host "  Codex lifecycle hooks are installed once in $CodexHooksJson."
+    Write-Host "  Trust the hook definition when Codex prompts so UI edits and final answers"
+    Write-Host "  are gated on accessibility-lead plus specialist completion."
     Write-Host "  Run: codex `"Review this page for accessibility issues`"."
 }
 
@@ -2285,7 +2369,7 @@ Write-Host "    irm https://raw.githubusercontent.com/Community-Access/accessibi
 Write-Host ""
 if ($CodexInstalled) {
     Write-Host "  Start Codex in this project and try: `"Review this component for accessibility issues`""
-    Write-Host "  The Accessibility Agents router skills and subagents should load after a new Codex session."
+    Write-Host "  The Accessibility Agents router skills, subagents, and lifecycle hook guard should load after a new Codex session."
 }
 else {
     Write-Host "  Start Claude Code and try: `"Build a login form`""

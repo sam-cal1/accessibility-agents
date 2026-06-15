@@ -11,6 +11,7 @@
  * - plugin.yaml (version: field)
  * - mcp-server/package.json (version field)
  * - gemini-extension.json (version field)
+ * - manifest.json (version field)
  * 
  * Exit codes:
  * - 0: All versions match
@@ -28,6 +29,7 @@ const FILES_TO_CHECK = [
   { file: 'plugin.yaml', type: 'yaml' },
   { file: 'mcp-server/package.json', type: 'json' },
   { file: 'gemini-extension.json', type: 'json' },
+  { file: 'manifest.json', type: 'json' },
 ];
 
 // Extract version from CHANGELOG.md

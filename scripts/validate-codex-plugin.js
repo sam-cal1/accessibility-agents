@@ -7,6 +7,8 @@ const pluginRoot = path.join(root, 'codex-plugin');
 const requiredFiles = [
   'codex-plugin/.codex-plugin/plugin.json',
   'codex-plugin/README.md',
+  'codex-plugin/hooks/hooks.json',
+  'codex-plugin/hooks/a11y-codex-dispatch-guard.mjs',
   'codex-plugin/skills/web-accessibility/SKILL.md',
   'codex-plugin/skills/document-accessibility/SKILL.md',
   'codex-plugin/skills/github-workflows/SKILL.md',
@@ -16,6 +18,7 @@ const requiredFiles = [
   'codex-plugin/agents/aria-specialist.toml',
   'codex-plugin/extensions/core/extension.json',
   'codex-plugin/extensions/README.md',
+  'scripts/codex-accessibility-dispatch-smoke.mjs',
 ];
 
 let failed = false;
@@ -44,6 +47,9 @@ if (fs.existsSync(pluginJsonPath)) {
     if (plugin.skills !== './skills/') {
       fail('codex-plugin/.codex-plugin/plugin.json: expected skills to be "./skills/"');
     }
+    if (Object.prototype.hasOwnProperty.call(plugin, 'hooks')) {
+      fail('codex-plugin/.codex-plugin/plugin.json: do not advertise hooks from the plugin manifest; the universal installer writes a single user-level hook guard.');
+    }
   } catch (error) {
     fail(`codex-plugin/.codex-plugin/plugin.json is not valid JSON: ${error.message}`);
   }
@@ -54,6 +60,16 @@ if (fs.existsSync(skillsDir)) {
   const skillNames = fs.readdirSync(skillsDir).filter((name) => fs.existsSync(path.join(skillsDir, name, 'SKILL.md')));
   if (skillNames.length > 8) {
     fail(`Codex plugin exposes ${skillNames.length} top-level skills; keep the router surface at 8 or fewer.`);
+  }
+}
+
+const legacyRolesDir = path.join(root, '.codex', 'roles');
+if (fs.existsSync(legacyRolesDir)) {
+  for (const file of fs.readdirSync(legacyRolesDir).filter((name) => name.endsWith('.toml'))) {
+    const body = fs.readFileSync(path.join(legacyRolesDir, file), 'utf8');
+    if (/^model\s*=/m.test(body)) {
+      fail(`.codex/roles/${file}: legacy role templates must not pin a model; the installer stamps the configured Codex model dynamically.`);
+    }
   }
 }
 
@@ -80,6 +96,58 @@ if (fs.existsSync(agentsDir)) {
   }
 }
 
+const codexHookPath = path.join(pluginRoot, 'hooks', 'hooks.json');
+if (fs.existsSync(codexHookPath)) {
+  try {
+    const hooks = JSON.parse(fs.readFileSync(codexHookPath, 'utf8'));
+    for (const eventName of ['UserPromptSubmit', 'SubagentStart', 'SubagentStop', 'PreToolUse', 'Stop']) {
+      if (!Array.isArray(hooks.hooks?.[eventName])) {
+        fail(`codex-plugin/hooks/hooks.json: missing ${eventName} hook.`);
+      }
+    }
+    const serialized = JSON.stringify(hooks);
+    for (const phrase of [
+      'a11y-codex-dispatch-guard.mjs',
+      'modal-specialist',
+      'SubagentStop',
+      'Stop',
+      'apply_patch|Edit|Write',
+      'Enforcing Accessibility Agents review',
+      'Checking Accessibility Agents synthesis',
+    ]) {
+      if (!serialized.includes(phrase)) {
+        fail(`codex-plugin/hooks/hooks.json: missing dispatch hook phrase "${phrase}".`);
+      }
+    }
+  } catch (error) {
+    fail(`codex-plugin/hooks/hooks.json is not valid JSON: ${error.message}`);
+  }
+}
+
+const codexHookScript = path.join(pluginRoot, 'hooks', 'a11y-codex-dispatch-guard.mjs');
+if (fs.existsSync(codexHookScript)) {
+  const body = fs.readFileSync(codexHookScript, 'utf8');
+  for (const phrase of [
+    'Accessibility Agents Codex dispatch is required',
+    'permissionDecision: "deny"',
+    'Spawn accessibility-lead first',
+    'handleStop',
+    'parent_thread_id',
+    'hasAgentStateSince',
+    'look for',
+    'SubagentStop',
+    'selectRequiredSpecialists',
+    'modal-specialist',
+    'tool_search',
+    'touchesUiFile',
+    'looksLikeUiWork',
+  ]) {
+    if (!body.includes(phrase)) {
+      fail(`codex-plugin/hooks/a11y-codex-dispatch-guard.mjs: missing dispatch guard phrase "${phrase}".`);
+    }
+  }
+}
+
 const accessibilityLeadToml = path.join(pluginRoot, 'agents', 'accessibility-lead.toml');
 if (fs.existsSync(accessibilityLeadToml)) {
   const body = fs.readFileSync(accessibilityLeadToml, 'utf8');
@@ -87,6 +155,8 @@ if (fs.existsSync(accessibilityLeadToml)) {
     'accessibility-lead is the lead agent',
     'dispatch matching Codex subagents by default',
     'same coordinator-worker pattern as Claude Code',
+    'New modal, dialog, drawer, popover, sheet, or overlay',
+    'Wait for every selected specialist to complete',
     'ship/no-ship call',
     'max_depth = 2',
   ]) {
@@ -100,6 +170,7 @@ const webRouterSkill = path.join(pluginRoot, 'skills', 'web-accessibility', 'SKI
 if (fs.existsSync(webRouterSkill)) {
   const body = fs.readFileSync(webRouterSkill, 'utf8');
   for (const phrase of [
+    'starts accessibility-lead first',
     'Explicitly spawn `accessibility-lead` as a Codex custom subagent',
     "Installing Accessibility Agents for Codex is the user's standing request",
     'call `tool_search` for `multi-agent subagent accessibility`',
@@ -112,10 +183,28 @@ if (fs.existsSync(webRouterSkill)) {
     'Dispatch matching Codex custom subagents by default',
     'Do not make users manually name every specialist',
     'the root session must spawn `accessibility-lead` and the selected specialists directly',
+    'Wait for `accessibility-lead` and every selected specialist to complete',
+    'New modal/dialog/overlay',
     'The lead synthesizes specialist output',
   ]) {
     if (!body.includes(phrase)) {
       fail(`codex-plugin/skills/web-accessibility/SKILL.md: missing lead-router guidance phrase "${phrase}".`);
+    }
+  }
+}
+
+const codexDispatchSmoke = path.join(root, 'scripts', 'codex-accessibility-dispatch-smoke.mjs');
+if (fs.existsSync(codexDispatchSmoke)) {
+  const body = fs.readFileSync(codexDispatchSmoke, 'utf8');
+  for (const phrase of [
+    'A11Y_DISPATCH_SMOKE',
+    '--live',
+    'accessibilityLeadSpawned !== "yes"',
+    'localFallback !== "no"',
+    'Codex accessibility dispatch source checks passed',
+  ]) {
+    if (!body.includes(phrase)) {
+      fail(`scripts/codex-accessibility-dispatch-smoke.mjs: missing smoke-test phrase "${phrase}".`);
     }
   }
 }
@@ -133,7 +222,13 @@ for (const installerRel of ['install.sh', 'install.ps1']) {
       'max_threads',
       'codex-agent-config',
       'codex-agent-model',
-      './a11y-agents-codex',
+      './.agents/plugins/a11y-agents-codex',
+      'codex plugin add a11y-agents-codex@accessibility-agents',
+      'codex-plugin-enabled',
+      'codex-hooks',
+      'SubagentStop',
+      'Checking Accessibility Agents synthesis',
+      'Codex user-level hook guard installed',
       'codex-marketplace-repaired',
     ]) {
       if (!body.includes(phrase)) {
@@ -142,6 +237,9 @@ for (const installerRel of ['install.sh', 'install.ps1']) {
     }
     if (!body.includes('CODEX_AGENT_MODEL') && !body.includes('CodexAgentModel')) {
       fail(`${installerRel}: missing dynamic Codex agent model variable.`);
+    }
+    if (!body.includes('CODEX_HOOKS_JSON') && !body.includes('CodexHooksJson')) {
+      fail(`${installerRel}: missing Codex user-level hooks file variable.`);
     }
   }
 }

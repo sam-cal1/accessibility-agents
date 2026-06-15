@@ -4,10 +4,13 @@ on:
   pull_request:
     paths:
       - '.github/skills/**'
+      - 'codex-plugin/**'
       - '.github/workflows/skills-release-readiness.yml'
       - '.github/workflows/skills-cli-readiness.yml'
       - '.github/workflows/skills-supply-chain.yml'
       - 'scripts/validate-agents.js'
+      - 'scripts/validate-codex-plugin.js'
+      - 'scripts/codex-accessibility-dispatch-smoke.mjs'
       - 'scripts/generate-skills-manifest.js'
       - 'scripts/generate-skills-sbom.js'
       - 'scripts/sign-skills-manifest.js'
@@ -40,6 +43,9 @@ jobs:
 
       - name: Validate Codex plugin surface
         run: node scripts/validate-codex-plugin.js
+
+      - name: Validate Codex accessibility dispatch contract
+        run: node scripts/codex-accessibility-dispatch-smoke.mjs
 
       - name: Generate release artifacts
         env:

@@ -967,6 +967,9 @@ for k in data.get('plugins', {}):
   local cache="$HOME/.claude/plugins/cache/${namespace}/${name}/${PLUGIN_VERSION}"
 
   # ---- Step 3: Copy plugin to cache ----
+  if [ -d "$cache" ]; then
+    rm -rf "$cache"
+  fi
   mkdir -p "$cache"
   cp -R "$src/." "$cache/"
   chmod +x "$cache/scripts/"*.sh 2>/dev/null || true
@@ -1892,12 +1895,14 @@ if [ "$install_codex" = true ] && { [ -d "$CODEX_PLUGIN_SRC" ] || [ -d "$CODEX_S
     CODEX_TARGET_DIR="$(pwd)/.codex"
     CODEX_AGENTS_PROFILE_DIR="$(pwd)/.agents"
     CODEX_PLUGIN_DST="$CODEX_AGENTS_PROFILE_DIR/plugins/a11y-agents-codex"
+    CODEX_MARKETPLACE_PLUGIN_PATH="./.agents/plugins/a11y-agents-codex"
     CODEX_EXTENSION_DST="$(pwd)/.a11y-agents/extensions"
     mkdir -p "$CODEX_TARGET_DIR"
   else
     CODEX_TARGET_DIR="$HOME/.codex"
     CODEX_AGENTS_PROFILE_DIR="$HOME/.agents"
     CODEX_PLUGIN_DST="$CODEX_AGENTS_PROFILE_DIR/plugins/a11y-agents-codex"
+    CODEX_MARKETPLACE_PLUGIN_PATH="./.agents/plugins/a11y-agents-codex"
     CODEX_EXTENSION_DST="$HOME/.a11y-agents/extensions"
     mkdir -p "$CODEX_TARGET_DIR"
   fi
@@ -2083,7 +2088,7 @@ PYEOF
       "name": "a11y-agents-codex",
       "source": {
         "source": "local",
-        "path": "./a11y-agents-codex"
+        "path": "$CODEX_MARKETPLACE_PLUGIN_PATH"
       },
       "policy": {
         "installation": "INSTALLED_BY_DEFAULT",
@@ -2097,26 +2102,27 @@ EOF
       add_manifest_entry "codex-marketplace/path:$CODEX_MARKETPLACE_JSON"
       echo "    + Codex plugin marketplace registered at $CODEX_MARKETPLACE_JSON"
     elif grep -q '"a11y-agents-codex"' "$CODEX_MARKETPLACE_JSON"; then
-      if grep -q '"path"[[:space:]]*:[[:space:]]*"\./a11y-agents-codex"' "$CODEX_MARKETPLACE_JSON"; then
+      if grep -q "\"path\"[[:space:]]*:[[:space:]]*\"$CODEX_MARKETPLACE_PLUGIN_PATH\"" "$CODEX_MARKETPLACE_JSON"; then
         echo "    + Codex plugin marketplace already includes a11y-agents-codex"
       else
-        python3 - "$CODEX_MARKETPLACE_JSON" << 'PYEOF'
+        python3 - "$CODEX_MARKETPLACE_JSON" "$CODEX_MARKETPLACE_PLUGIN_PATH" << 'PYEOF'
 import json
 import sys
 from pathlib import Path
 
 path = Path(sys.argv[1])
+plugin_path = sys.argv[2]
 data = json.loads(path.read_text(encoding="utf-8"))
 for plugin in data.get("plugins", []):
     if plugin.get("name") == "a11y-agents-codex":
-        plugin["source"] = {"source": "local", "path": "./a11y-agents-codex"}
+        plugin["source"] = {"source": "local", "path": plugin_path}
         plugin.setdefault("policy", {"installation": "INSTALLED_BY_DEFAULT", "authentication": "ON_INSTALL"})
         plugin.setdefault("category", "Developer Tools")
         break
 else:
     data.setdefault("plugins", []).append({
         "name": "a11y-agents-codex",
-        "source": {"source": "local", "path": "./a11y-agents-codex"},
+        "source": {"source": "local", "path": plugin_path},
         "policy": {"installation": "INSTALLED_BY_DEFAULT", "authentication": "ON_INSTALL"},
         "category": "Developer Tools",
     })
@@ -2129,6 +2135,85 @@ PYEOF
       echo "    ! Existing Codex marketplace left unchanged at $CODEX_MARKETPLACE_JSON"
       echo "      Router skills and subagents were installed directly."
     fi
+
+    if command -v codex >/dev/null 2>&1; then
+      if codex plugin add a11y-agents-codex@accessibility-agents >/dev/null 2>&1; then
+        add_manifest_entry "codex-plugin-enabled/name:a11y-agents-codex@accessibility-agents"
+        echo "    + Codex plugin installed and enabled for hooks"
+      else
+        echo "    ! Could not auto-enable the Codex plugin with 'codex plugin add'"
+        echo "      Run: codex plugin add a11y-agents-codex@accessibility-agents"
+      fi
+    else
+      echo "    ! Codex CLI not found; plugin marketplace was written but not enabled"
+      echo "      Run after installing Codex: codex plugin add a11y-agents-codex@accessibility-agents"
+    fi
+
+    CODEX_HOOKS_JSON="$CODEX_TARGET_DIR/hooks.json"
+    python3 - "$CODEX_HOOKS_JSON" "$CODEX_PLUGIN_DST/hooks/a11y-codex-dispatch-guard.mjs" << 'PYEOF'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+script = Path(sys.argv[2])
+data = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+hooks = data.setdefault("hooks", {})
+
+def upsert(event, key, entry):
+    groups = hooks.setdefault(event, [])
+    for index, group in enumerate(groups):
+        serialized = json.dumps(group)
+        if key in serialized:
+            groups[index] = entry
+            return
+    groups.append(entry)
+
+command = f"node {script}"
+upsert("UserPromptSubmit", "a11y-codex-dispatch-guard.mjs", {
+    "hooks": [{
+        "type": "command",
+        "command": command,
+        "statusMessage": "Checking Accessibility Agents dispatch",
+    }],
+})
+upsert("SubagentStart", "a11y-codex-dispatch-guard.mjs", {
+    "matcher": "^(accessibility-lead|aria-specialist|keyboard-navigator|contrast-master|forms-specialist|modal-specialist|live-region-controller|alt-text-headings|tables-data-specialist|link-checker|web-accessibility-wizard)$",
+    "hooks": [{
+        "type": "command",
+        "command": command,
+        "statusMessage": "Recording Accessibility Agents dispatch",
+    }],
+})
+upsert("SubagentStop", "a11y-codex-dispatch-guard.mjs", {
+    "matcher": "^(accessibility-lead|aria-specialist|keyboard-navigator|contrast-master|forms-specialist|modal-specialist|live-region-controller|alt-text-headings|tables-data-specialist|link-checker|web-accessibility-wizard)$",
+    "hooks": [{
+        "type": "command",
+        "command": command,
+        "statusMessage": "Recording Accessibility Agents completion",
+    }],
+})
+upsert("PreToolUse", "a11y-codex-dispatch-guard.mjs", {
+    "matcher": "apply_patch|Edit|Write",
+    "hooks": [{
+        "type": "command",
+        "command": command,
+        "statusMessage": "Enforcing Accessibility Agents review",
+    }],
+})
+upsert("Stop", "a11y-codex-dispatch-guard.mjs", {
+    "hooks": [{
+        "type": "command",
+        "command": command,
+        "statusMessage": "Checking Accessibility Agents synthesis",
+        "timeout": 30,
+    }],
+})
+path.parent.mkdir(parents=True, exist_ok=True)
+path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+PYEOF
+    add_manifest_entry "codex-hooks/path:$CODEX_HOOKS_JSON"
+    echo "    + Codex user-level hook guard installed to $CODEX_HOOKS_JSON"
   fi
   if [ ! -d "$CODEX_PLUGIN_SRC" ] && [ -f "$CODEX_CONFIG_SRC" ]; then
     merge_config_file "$CODEX_CONFIG_SRC" "$CODEX_CONFIG_DST" "config.toml (Codex experimental roles)"
@@ -2167,8 +2252,9 @@ PYEOF
   echo ""
   echo "  Codex will now load the Accessibility Agents router skills."
   echo "  Codex subagents are available after starting a new Codex session."
-  echo "  Codex hook support exists upstream, but it is currently experimental and"
-  echo "  only intercepts Bash/local-shell flows, not all file-edit tools."
+  echo "  Codex lifecycle hooks are installed once in $CODEX_TARGET_DIR/hooks.json."
+  echo "  Trust the hook definition when Codex prompts so UI edits and final answers"
+  echo "  are gated on accessibility-lead plus specialist completion."
   echo "  Run: codex \"Review this page for accessibility issues\"."
 fi
 
@@ -2795,7 +2881,7 @@ if [ "$PLUGIN_INSTALL" = true ]; then
   echo "  The plugin will:"
   echo "    - Inject accessibility-lead delegation instruction into every UI prompt"
   echo "    - Remind to consult accessibility-lead before editing UI files"
-  echo "    - accessibility-lead delegates to specialists via Task tool"
+  echo "    - Require accessibility-lead plus relevant specialists to complete before final UI answers"
 else
   echo "  If agents do not load, increase the character budget:"
   echo "    export SLASH_COMMAND_TOOL_CHAR_BUDGET=30000"
@@ -2808,7 +2894,7 @@ echo "  For manual uninstall instructions, see: UNINSTALL.md"
 echo ""
 if [ "$CODEX_INSTALLED" = true ]; then
   echo "  Start Codex in this project and try: \"Review this component for accessibility issues\""
-  echo "  The Accessibility Agents router skills and subagents should load after a new Codex session."
+  echo "  The Accessibility Agents router skills, subagents, and lifecycle hook guard should load after a new Codex session."
 else
   echo "  Start Claude Code and try: \"Build a login form\""
   echo "  The accessibility-lead should activate automatically."
