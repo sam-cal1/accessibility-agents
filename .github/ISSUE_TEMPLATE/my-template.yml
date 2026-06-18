@@ -1,0 +1,19 @@
+name: Issue Template Name         # Shows in template chooser
+description: Longer description   # Shows in template chooser
+title: "[TAG] "                   # Pre-filled issue title
+labels: ["label1", "label2"]      # Auto-applied labels
+assignees: ["username"]           # Auto-assigned (optional)
+body:                             # Array of form fields
+  - type: markdown
+    attributes:
+      value: |
+        Instructional text here
+
+  - type: input
+    id: unique-field-id
+    attributes:
+      label: Field Label
+      description: Help text under the label
+      placeholder: Placeholder text in the field
+    validations:
+      required: true
